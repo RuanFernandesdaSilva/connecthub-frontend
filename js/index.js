@@ -1,29 +1,16 @@
-// js/auth.js
 import { API_BASE_URL, API_AUTH_URL } from './config.js';
 
-// Alternar entre abas de Login e Cadastro
-function switchTab(tab) {
-  const loginForm = document.getElementById('loginForm');
-  const registerForm = document.getElementById('registerForm');
-  const btnLogin = document.getElementById('btnTabLogin');
-  const btnRegister = document.getElementById('btnTabRegister');
-  hideMessage();
+// Cache dos elementos do DOM
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const btnTabLogin = document.getElementById('btnTabLogin');
+const btnTabRegister = document.getElementById('btnTabRegister');
+const msgDiv = document.getElementById('responseMessage');
 
-  if (tab === 'login') {
-    loginForm?.classList.remove('hidden');
-    registerForm?.classList.add('hidden');
-    btnLogin?.classList.add('active');
-    btnRegister?.classList.remove('active');
-  } else {
-    loginForm?.classList.add('hidden');
-    registerForm?.classList.remove('hidden');
-    btnLogin?.classList.remove('active');
-    btnRegister?.classList.add('active');
-  }
-}
-
+/**
+ * Exibe mensagem de feedback para o usuário.
+ */
 function showMessage(text, isSuccess) {
-  const msgDiv = document.getElementById('responseMessage');
   if (msgDiv) {
     msgDiv.textContent = text;
     msgDiv.className = `message ${isSuccess ? 'success' : 'error'}`;
@@ -31,12 +18,38 @@ function showMessage(text, isSuccess) {
   }
 }
 
+/**
+ * Oculta o painel de mensagens.
+ */
 function hideMessage() {
-  const msgDiv = document.getElementById('responseMessage');
-  if (msgDiv) msgDiv.style.display = 'none';
+  if (msgDiv) {
+    msgDiv.style.display = 'none';
+    msgDiv.textContent = '';
+  }
 }
 
-// Função para direcionar para a Home correspondente ao perfil
+/**
+ * Alterna entre as abas de Login e Cadastro.
+ */
+function switchTab(tab) {
+  hideMessage();
+
+  if (tab === 'login') {
+    loginForm?.classList.remove('hidden');
+    registerForm?.classList.add('hidden');
+    btnTabLogin?.classList.add('active');
+    btnTabRegister?.classList.remove('active');
+  } else {
+    loginForm?.classList.add('hidden');
+    registerForm?.classList.remove('hidden');
+    btnTabLogin?.classList.remove('active');
+    btnTabRegister?.classList.add('active');
+  }
+}
+
+/**
+ * Redireciona o usuário para a Home correspondente.
+ */
 function redirecionarParaHome(tipo, id) {
   const perfil = (tipo || '').toUpperCase().replace('ROLE_', '');
   if (perfil === 'IDOSO') {
@@ -46,77 +59,107 @@ function redirecionarParaHome(tipo, id) {
   }
 }
 
-// Listeners dos botões de alternar abas
-document.getElementById('btnTabLogin')?.addEventListener('click', () => switchTab('login'));
-document.getElementById('btnTabRegister')?.addEventListener('click', () => switchTab('register'));
+// Event Listeners das Abas
+btnTabLogin?.addEventListener('click', () => switchTab('login'));
+btnTabRegister?.addEventListener('click', () => switchTab('register'));
 
-// 1. EXECUTA O CADASTRO
-document.getElementById('registerForm')?.addEventListener('submit', async (e) => {
+// 1. EXECUTA O CADASTRO DE USUÁRIO
+registerForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   hideMessage();
 
+  const submitBtn = registerForm.querySelector('button[type="submit"]');
+  
+  const nome = document.getElementById('regNome')?.value.trim();
+  const email = document.getElementById('regEmail')?.value.trim();
+  const senha = document.getElementById('regSenha')?.value;
+  const telefone = document.getElementById('regTelefone')?.value.trim();
+  const perfil = document.getElementById('regPerfil')?.value;
+
+  if (!nome || !email || !senha || !perfil) {
+    showMessage('Por favor, preencha todos os campos obrigatórios.', false);
+    return;
+  }
+
   const bodyData = {
-    nome: document.getElementById('regNome').value,
-    email: document.getElementById('regEmail').value,
-    senha: document.getElementById('regSenha').value,
-    telefone: document.getElementById('regTelefone').value,
+    nome,
+    email,
+    senha,
+    telefone: telefone || null,
     telegramChatId: null,
-    perfil: document.getElementById('regPerfil').value
+    perfil
   };
 
   try {
-    const response = await fetch(`${API_AUTH_URL}/register`, {
+    if (submitBtn) submitBtn.disabled = true;
+
+    // Rota direta para criação de usuário (evita duplicação /login/register)
+    const response = await fetch(`${API_BASE_URL}/usuarios`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(bodyData)
     });
 
-    const msgText = await response.text();
+    let msgText = '';
+    try {
+      const jsonRes = await response.json();
+      msgText = jsonRes.mensagem || jsonRes.message || 'Operação concluída.';
+    } catch {
+      msgText = await response.text();
+    }
 
-    if (response.status === 201) {
-      showMessage(msgText, true);
-      document.getElementById('registerForm').reset();
+    if (response.ok || response.status === 201) {
+      showMessage(msgText || 'Cadastro realizado com sucesso!', true);
+      registerForm.reset();
       setTimeout(() => switchTab('login'), 1500);
     } else {
-      showMessage(msgText, false);
+      showMessage(msgText || 'Erro ao realizar cadastro.', false);
     }
   } catch (error) {
-    showMessage('Erro ao conectar com a aplicação Spring Boot!', false);
+    console.error('Erro no cadastro:', error);
+    showMessage('Erro ao conectar com o servidor Spring Boot!', false);
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
   }
 });
 
-// 2. EXECUTA O LOGIN COM REDIRECIONAMENTO INTELIGENTE E COOKIE DE SESSÃO
-document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+// 2. EXECUTA O LOGIN DE USUÁRIO
+loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   hideMessage();
 
-  const bodyData = {
-    email: document.getElementById('loginEmail').value,
-    senha: document.getElementById('loginSenha').value
-  };
+  const submitBtn = loginForm.querySelector('button[type="submit"]');
+  const email = document.getElementById('loginEmail')?.value.trim();
+  const senha = document.getElementById('loginSenha')?.value;
+
+  if (!email || !senha) {
+    showMessage('Informe o e-mail e a senha.', false);
+    return;
+  }
 
   try {
+    if (submitBtn) submitBtn.disabled = true;
+
     const response = await fetch(API_AUTH_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify(bodyData)
+      body: JSON.stringify({ email, senha })
     });
 
     if (response.ok) {
       const responseData = await response.json();
-      
+
       const userId = responseData.id;
       const userTipo = (responseData.tipo || responseData.perfil || '').toUpperCase().replace('ROLE_', '');
       const userNome = responseData.nome || 'Usuário';
 
-      // 1. Salva os dados básicos no localStorage
       localStorage.setItem('userId', userId);
       localStorage.setItem('userTipo', userTipo);
       localStorage.setItem('userNome', userNome);
 
-      // 2. Consulta no Backend se o Telegram JÁ está conectado no Banco de Dados
+      // Consulta status atual do Telegram
       let telegramConectado = Boolean(responseData.telegramConectado);
 
       try {
@@ -126,13 +169,12 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         });
         if (statusRes.ok) {
           const statusData = await statusRes.json();
-          telegramConectado = statusData.telegramConectado;
+          telegramConectado = Boolean(statusData.telegramConectado);
         }
       } catch (errStatus) {
-        console.warn('Não foi possível verificar status atualizado do Telegram:', errStatus);
+        console.warn('Não foi possível verificar status do Telegram:', errStatus);
       }
 
-      // 3. Atualiza o objeto completo de sessão
       const dadosSessao = {
         id: userId,
         nome: userNome,
@@ -143,7 +185,7 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
 
       showMessage('Login realizado com sucesso! Entrando...', true);
 
-      // 4. ROTEAMENTO INTELIGENTE
+      // Roteamento de acordo com o estado do Telegram
       setTimeout(() => {
         if (telegramConectado) {
           redirecionarParaHome(userTipo, userId);
@@ -153,16 +195,24 @@ document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
       }, 1000);
 
     } else {
-      const msgText = await response.text();
+      let msgText = '';
+      try {
+        const jsonRes = await response.json();
+        msgText = jsonRes.mensagem || jsonRes.message;
+      } catch {
+        msgText = await response.text();
+      }
       showMessage(msgText || 'E-mail ou senha incorretos.', false);
     }
   } catch (error) {
     console.error('Erro no login:', error);
     showMessage('Erro de conexão ao efetuar login.', false);
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
   }
 });
 
-// 3. VERIFICA A SESSÃO ATIVA
+// 3. VERIFICA SESSÃO ATIVA
 async function checkSession() {
   try {
     const response = await fetch(API_AUTH_URL, {
@@ -170,20 +220,18 @@ async function checkSession() {
       credentials: 'include'
     });
 
+    const sessionPanel = document.getElementById('sessionPanel');
+    const sessionDetails = document.getElementById('sessionDetails');
+
     if (response.ok) {
       const infoText = await response.text();
-      const sessionDetails = document.getElementById('sessionDetails');
-      const sessionPanel = document.getElementById('sessionPanel');
-      
       if (sessionDetails) sessionDetails.textContent = infoText;
       if (sessionPanel) sessionPanel.classList.remove('hidden');
-
     } else {
-      const sessionPanel = document.getElementById('sessionPanel');
       if (sessionPanel) sessionPanel.classList.add('hidden');
     }
   } catch (error) {
-    console.error('Falha ao verificar sessão', error);
+    console.warn('Não foi possível validar sessão ativa:', error);
   }
 }
 
@@ -195,7 +243,7 @@ async function logout() {
       credentials: 'include'
     });
   } catch (error) {
-    console.error('Erro ao realizar o logout no servidor.', error);
+    console.error('Erro ao encerrar sessão no servidor:', error);
   } finally {
     localStorage.clear();
     showMessage('Sessão encerrada com sucesso.', true);
@@ -204,7 +252,9 @@ async function logout() {
   }
 }
 
-// Exposição global para escopos de eventos HTML se necessário
+// Exposição global
 window.logout = logout;
 
+// Executa verificação inicial
 checkSession();
+// No final do js/index.js

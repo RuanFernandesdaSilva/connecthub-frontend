@@ -1,10 +1,65 @@
-// js/home-idoso.js
-import { API_BASE_URL, API_AUTH_URL } from './config.js';
+import { API_BASE_URL, API_AUTH_URL, API_VINCULO_URL } from './config.js';
 
 const DEFAULT_AVATAR = 'https://via.placeholder.com/100/cbd5e0/ffffff?text=User';
 
 let usuarioLogado = null;
 
+/**
+ * Escapa caracteres especiais para prevenir injeção XSS.
+ */
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Carrega e valida os dados de sessão salvos localmente no navegador.
+ */
+function carregarSessaoLocal() {
+  const usuarioSalvo = localStorage.getItem('usuario');
+  if (usuarioSalvo) {
+    try {
+      usuarioLogado = JSON.parse(usuarioSalvo);
+    } catch (e) {
+      usuarioLogado = null;
+    }
+  }
+
+  if (!usuarioLogado || !usuarioLogado.id) {
+    const idSolf = localStorage.getItem('userId');
+    const nomeSolf = localStorage.getItem('userNome');
+    const tipoSolf = localStorage.getItem('userTipo');
+
+    if (idSolf) {
+      usuarioLogado = {
+        id: parseInt(idSolf, 10),
+        nome: nomeSolf || 'Idoso',
+        tipo: tipoSolf || 'IDOSO'
+      };
+    }
+  }
+}
+
+/**
+ * Processa resposta de sessão em formato de texto.
+ */
+function parseSessaoTexto(texto) {
+  const matchId = texto.match(/(?:ID:\s*|id=)(\d+)/i);
+  const matchNome = texto.match(/(?:Nome:\s*|nome=)([^,\n]+)/i);
+
+  return {
+    id: matchId ? parseInt(matchId[1], 10) : null,
+    nome: matchNome ? matchNome[1].trim() : 'Idoso',
+    tipo: 'IDOSO'
+  };
+}
+
+// 1. INICIALIZAÇÃO DA PÁGINA
 async function inicializarHomeIdoso() {
   try {
     const response = await fetch(API_AUTH_URL, {
@@ -23,7 +78,7 @@ async function inicializarHomeIdoso() {
       carregarSessaoLocal();
     }
   } catch (error) {
-    console.warn('Servidor indisponível, tentando carregar dados do localStorage:', error);
+    console.warn('Servidor indisponível, recorrendo aos dados locais:', error);
     carregarSessaoLocal();
   }
 
@@ -36,28 +91,7 @@ async function inicializarHomeIdoso() {
   carregarFamiliaresVinculados(usuarioLogado.id);
 }
 
-function carregarSessaoLocal() {
-  const usuarioSalvo = localStorage.getItem('usuario');
-  if (usuarioSalvo) {
-    try {
-      usuarioLogado = JSON.parse(usuarioSalvo);
-    } catch (e) {
-      usuarioLogado = null;
-    }
-  }
-}
-
-function parseSessaoTexto(texto) {
-  const matchId = texto.match(/(?:ID:\s*|id=)(\d+)/i);
-  const matchNome = texto.match(/(?:Nome:\s*|nome=)([^,\n]+)/i);
-  
-  return {
-    id: matchId ? parseInt(matchId[1], 10) : null,
-    nome: matchNome ? matchNome[1].trim() : 'Idoso',
-    perfil: 'IDOSO'
-  };
-}
-
+// 2. RENDERIZAÇÃO DO PERFIL DO IDOSO
 function renderizarPerfil() {
   if (!usuarioLogado) return;
 
@@ -68,61 +102,64 @@ function renderizarPerfil() {
   if (avatarElem) avatarElem.src = usuarioLogado.fotoUrl || usuarioLogado.imagemUrl || DEFAULT_AVATAR;
 }
 
-// -------------------------------------------------------------
-// LISTAR FAMILIARES VINCULADOS AO IDOSO
-// -------------------------------------------------------------
+// 3. CARREGAR FAMILIARES VINCULADOS
 async function carregarFamiliaresVinculados(idosoId) {
   const container = document.getElementById('listaFamiliaresVinculados');
   if (!container) return;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/vinculos/idoso/${idosoId}`, {
+    const endpointVinculos = API_VINCULO_URL 
+      ? `${API_VINCULO_URL}/idoso/${idosoId}`
+      : `${API_BASE_URL}/api/vinculos/idoso/${idosoId}`;
+
+    const response = await fetch(endpointVinculos, {
       method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include'
     });
 
     if (response.ok) {
       const familiares = await response.json();
 
-      if (!familiares || familiares.length === 0) {
+      if (!Array.isArray(familiares) || familiares.length === 0) {
         container.innerHTML = '<p style="color: #777;">Nenhum familiar vinculado ainda.</p>';
         return;
       }
 
-      container.innerHTML = familiares.map(fam => `
-        <div class="card-familiar" style="border: 1px solid #cbd5e0; padding: 10px 15px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; gap: 10px;">
-          <img src="${fam.fotoUrl || DEFAULT_AVATAR}" alt="${fam.nome}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
-          <div>
-            <strong style="display: block; font-size: 0.95rem;">${fam.nome}</strong>
-            <small style="color: #64748b;">Tel: ${fam.telefone || 'Não informado'}</small>
+      container.innerHTML = familiares.map(fam => {
+        const nomeFormatado = escapeHtml(fam.nome || 'Familiar');
+        const telFormatado = escapeHtml(fam.telefone || 'Não informado');
+        const fotoUrl = fam.fotoUrl || fam.imagemUrl || DEFAULT_AVATAR;
+
+        return `
+          <div class="card-familiar" style="border: 1px solid #cbd5e0; padding: 10px 15px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <img src="${fotoUrl}" alt="${nomeFormatado}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+            <div>
+              <strong style="display: block; font-size: 0.95rem; color: #2d3748;">${nomeFormatado}</strong>
+              <small style="color: #64748b;">Tel: ${telFormatado}</small>
+            </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     } else {
       container.innerHTML = '<p style="color: #777;">Nenhum familiar vinculado ainda.</p>';
     }
   } catch (error) {
-    console.error('Erro ao buscar familiares do idoso:', error);
+    console.error('Erro ao carregar familiares do idoso:', error);
     container.innerHTML = '<p style="color: #e53e3e;">Erro ao carregar vínculos.</p>';
   }
 }
 
-// Redireciona enviando o ID e armazenando no localStorage por garantia
+// 4. ROTAS E NAVEGAÇÃO
 function irParaQRCode() {
   let idDestino = null;
 
   if (usuarioLogado && usuarioLogado.id) {
     idDestino = usuarioLogado.id;
   } else {
-    const usuarioSalvo = localStorage.getItem('usuario');
-    if (usuarioSalvo) {
-      try {
-        const obj = JSON.parse(usuarioSalvo);
-        idDestino = obj.id || obj.userId;
-      } catch (e) {}
-    }
-    if (!idDestino) {
-      idDestino = localStorage.getItem('userId');
+    carregarSessaoLocal();
+    if (usuarioLogado && usuarioLogado.id) {
+      idDestino = usuarioLogado.id;
     }
   }
 
@@ -148,6 +185,8 @@ function mostrarAvisoEmBreve(modulo) {
     setTimeout(() => {
       msgDiv.classList.add('hidden');
     }, 3000);
+  } else {
+    alert(`O módulo de "${modulo}" estará disponível em breve!`);
   }
 }
 
@@ -172,7 +211,7 @@ function redirecionarParaLogin() {
 
 document.addEventListener('DOMContentLoaded', inicializarHomeIdoso);
 
-// Exposição global das funções usadas pelo HTML (botões e links)
+// Exposição explícita para manipuladores HTML (onclick)
 window.irParaQRCode = irParaQRCode;
 window.navegarPara = navegarPara;
 window.mostrarAvisoEmBreve = mostrarAvisoEmBreve;

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vitalis - Painel do Idoso</title>
+  <link rel="stylesheet" href="css/home-idoso.css">
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Cabeçalho do Perfil -->
+    <header class="profile-header card">
+      <div class="profile-avatar-wrapper">
+        <img id="userAvatar" src="https://via.placeholder.com/100/cbd5e0/ffffff?text=User" alt="Foto de Perfil" class="profile-avatar">
+      </div>
+      <div class="profile-info">
+        <h2 id="userName">Carregando...</h2>
+        <span class="user-role-badge role-idoso">Idoso</span>
+      </div>
+      <button class="btn btn-logout" onclick="fazerLogout()">Sair</button>
+    </header>
+
+    <!-- Caixa de Mensagens de Feedback -->
+    <div id="responseMessage" class="alert hidden"></div>
+
+    <!-- SEÇÃO DE FAMILIARES VINCULADOS -->
+    <section class="card" style="margin-bottom: 20px;">
+      <h3>Meus Familiares Vinculados</h3>
+      <div id="listaFamiliaresVinculados" class="vinculados-grid" style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
+        <p style="color: #666;">Carregando vínculos...</p>
+      </div>
+    </section>
+
+    <!-- Seção Principal de Módulos / Opções -->
+    <main class="dashboard-section">
+      <h3>Seu Painel Principal</h3>
+      <p class="subtitle">Selecione uma das opções abaixo para acessar seus recursos:</p>
+
+      <div class="dashboard-grid">
+
+        <!-- Vínculo (Vai DIRETO para a tela de QR Code) -->
+        <div class="dash-card" onclick="irParaQRCode()">
+          <div class="dash-icon">📱</div>
+          <h4>Meu QR Code</h4>
+          <p>Exiba seu código para que seu familiar possa se vincular a você.</p>
+        </div>
+
+        <!-- Configurações (Ativo) -->
+        <div class="dash-card" onclick="navegarPara('configuracoes.html')">
+          <div class="dash-icon">⚙️</div>
+          <h4>Configurações</h4>
+          <p>Ajuste dados do perfil, tamanho de fonte e preferências.</p>
+        </div>
+
+        <!-- Medicamentos (Em breve) -->
+        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Medicamentos')">
+          <div class="dash-icon">💊</div>
+          <h4>Meus Remédios</h4>
+          <p>Consulte os horários e avisos dos seus medicamentos.</p>
+        </div>
+
+        <!-- Eventos (Em breve) -->
+        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Eventos')">
+          <div class="dash-icon">📅</div>
+          <h4>Meus Compromissos</h4>
+          <p>Veja sua agenda de consultas e atividades.</p>
+        </div>
+
+        <!-- Compras (Em breve) -->
+        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Compras')">
+          <div class="dash-icon">🛒</div>
+          <h4>Lista de Compras</h4>
+          <p>Confira itens da sua lista e pedidos para familiares.</p>
+        </div>
+
+        <!-- Jogos (Em breve) -->
+        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Jogos')">
+          <div class="dash-icon">🎮</div>
+          <h4>Jogos e Estímulo</h4>
+          <p>Exercite a memória com jogos interativos simples.</p>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <script type="module" src="js/home-idoso.js"></script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+
+/* CONTAINER PRINCIPAL */
+
+.configuracoes-container {
+    width: 90%;
+    max-width: 700px;
+    margin: 40px auto;
+}
+
+
+/* TÍTULO */
+
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 32px;
+}
+
+
+/* SEÇÕES */
+
+.secao {
+    background-color: white;
+    padding: 25px;
+    margin-bottom: 20px;
+    border-radius: 15px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.secao h2 {
+    font-size: 22px;
+    margin-bottom: 20px;
+}
+
+
+/* FOTO */
+
+.foto-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.foto-perfil {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-bottom: 15px;
+    border: 3px solid #ddd;
+}
+
+.foto-perfil img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+/* CAMPOS */
+
+.campo {
+    margin-bottom: 20px;
+}
+
+.campo label {
+    display: block;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.campo input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 17px;
+}
+
+.campo input:focus {
+    outline: none;
+    border-color: #555;
+}
+
+
+/* TIPO DE USUÁRIO */
+
+#tipoUsuario {
+    font-size: 18px;
+    padding: 14px;
+    background-color: #f1f1f1;
+    border-radius: 8px;
+}
+
+
+/* BOTÕES */
+
+button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#btnAlterarFoto {
+    width: auto;
+    padding: 12px 20px;
+}
+
+#btnSalvar {
+    background-color: #333;
+    color: white;
+}
+
+#btnAlterarSenha {
+    background-color: #eee;
+    color: #333;
+}
+
+#btnSair {
+    background-color: #eee;
+    color: #333;
+}
+
+#btnExcluirConta {
+    background-color: #d9534f;
+    color: white;
+}
+
+
+/* EFEITO DOS BOTÕES */
+
+button:hover {
+    opacity: 0.85;
+}
+
+
+/* CELULAR */
+
+@media (max-width: 600px) {
+
+    .configuracoes-container {
+        width: 95%;
+        margin: 20px auto;
+    }
+
+    .secao {
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 28px;
+    }
+
+}

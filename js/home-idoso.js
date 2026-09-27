@@ -1,0 +1,179 @@
+// js/home-idoso.js
+import { API_BASE_URL, API_AUTH_URL } from './config.js';
+
+const DEFAULT_AVATAR = 'https://via.placeholder.com/100/cbd5e0/ffffff?text=User';
+
+let usuarioLogado = null;
+
+async function inicializarHomeIdoso() {
+  try {
+    const response = await fetch(API_AUTH_URL, {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      try {
+        usuarioLogado = await response.json();
+      } catch (e) {
+        const textoSessao = await response.text();
+        usuarioLogado = parseSessaoTexto(textoSessao);
+      }
+    } else {
+      carregarSessaoLocal();
+    }
+  } catch (error) {
+    console.warn('Servidor indisponível, tentando carregar dados do localStorage:', error);
+    carregarSessaoLocal();
+  }
+
+  if (!usuarioLogado || !usuarioLogado.id) {
+    redirecionarParaLogin();
+    return;
+  }
+
+  renderizarPerfil();
+  carregarFamiliaresVinculados(usuarioLogado.id);
+}
+
+function carregarSessaoLocal() {
+  const usuarioSalvo = localStorage.getItem('usuario');
+  if (usuarioSalvo) {
+    try {
+      usuarioLogado = JSON.parse(usuarioSalvo);
+    } catch (e) {
+      usuarioLogado = null;
+    }
+  }
+}
+
+function parseSessaoTexto(texto) {
+  const matchId = texto.match(/(?:ID:\s*|id=)(\d+)/i);
+  const matchNome = texto.match(/(?:Nome:\s*|nome=)([^,\n]+)/i);
+  
+  return {
+    id: matchId ? parseInt(matchId[1], 10) : null,
+    nome: matchNome ? matchNome[1].trim() : 'Idoso',
+    perfil: 'IDOSO'
+  };
+}
+
+function renderizarPerfil() {
+  if (!usuarioLogado) return;
+
+  const nomeElem = document.getElementById('userName');
+  const avatarElem = document.getElementById('userAvatar');
+
+  if (nomeElem) nomeElem.textContent = usuarioLogado.nome || 'Idoso';
+  if (avatarElem) avatarElem.src = usuarioLogado.fotoUrl || usuarioLogado.imagemUrl || DEFAULT_AVATAR;
+}
+
+// -------------------------------------------------------------
+// LISTAR FAMILIARES VINCULADOS AO IDOSO
+// -------------------------------------------------------------
+async function carregarFamiliaresVinculados(idosoId) {
+  const container = document.getElementById('listaFamiliaresVinculados');
+  if (!container) return;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/vinculos/idoso/${idosoId}`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      const familiares = await response.json();
+
+      if (!familiares || familiares.length === 0) {
+        container.innerHTML = '<p style="color: #777;">Nenhum familiar vinculado ainda.</p>';
+        return;
+      }
+
+      container.innerHTML = familiares.map(fam => `
+        <div class="card-familiar" style="border: 1px solid #cbd5e0; padding: 10px 15px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; gap: 10px;">
+          <img src="${fam.fotoUrl || DEFAULT_AVATAR}" alt="${fam.nome}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+          <div>
+            <strong style="display: block; font-size: 0.95rem;">${fam.nome}</strong>
+            <small style="color: #64748b;">Tel: ${fam.telefone || 'Não informado'}</small>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      container.innerHTML = '<p style="color: #777;">Nenhum familiar vinculado ainda.</p>';
+    }
+  } catch (error) {
+    console.error('Erro ao buscar familiares do idoso:', error);
+    container.innerHTML = '<p style="color: #e53e3e;">Erro ao carregar vínculos.</p>';
+  }
+}
+
+// Redireciona enviando o ID e armazenando no localStorage por garantia
+function irParaQRCode() {
+  let idDestino = null;
+
+  if (usuarioLogado && usuarioLogado.id) {
+    idDestino = usuarioLogado.id;
+  } else {
+    const usuarioSalvo = localStorage.getItem('usuario');
+    if (usuarioSalvo) {
+      try {
+        const obj = JSON.parse(usuarioSalvo);
+        idDestino = obj.id || obj.userId;
+      } catch (e) {}
+    }
+    if (!idDestino) {
+      idDestino = localStorage.getItem('userId');
+    }
+  }
+
+  if (idDestino) {
+    localStorage.setItem('userId', idDestino);
+    window.location.href = `qrcode.html?id=${idDestino}`;
+  } else {
+    mostrarAvisoEmBreve('Identificação do usuário não encontrada. Faça login novamente.');
+  }
+}
+
+function navegarPara(pagina) {
+  window.location.href = pagina;
+}
+
+function mostrarAvisoEmBreve(modulo) {
+  const msgDiv = document.getElementById('responseMessage');
+  if (msgDiv) {
+    msgDiv.textContent = `O módulo de "${modulo}" estará disponível em breve!`;
+    msgDiv.className = 'alert alert-info';
+    msgDiv.classList.remove('hidden');
+
+    setTimeout(() => {
+      msgDiv.classList.add('hidden');
+    }, 3000);
+  }
+}
+
+async function fazerLogout() {
+  try {
+    await fetch(`${API_AUTH_URL}/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+  } catch (e) {
+    console.warn('Erro ao encerrar sessão no servidor:', e);
+  } finally {
+    localStorage.clear();
+    window.location.href = 'auth.html?logout=true';
+  }
+}
+
+function redirecionarParaLogin() {
+  localStorage.clear();
+  window.location.href = 'auth.html';
+}
+
+document.addEventListener('DOMContentLoaded', inicializarHomeIdoso);
+
+// Exposição global das funções usadas pelo HTML (botões e links)
+window.irParaQRCode = irParaQRCode;
+window.navegarPara = navegarPara;
+window.mostrarAvisoEmBreve = mostrarAvisoEmBreve;
+window.fazerLogout = fazerLogout;

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vitalis - Autenticação</title>
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Roteador de Autenticação / Redirecionamento Automático -->
+<!-- Roteador de Autenticação / Redirecionamento Automático -->
+<!-- Roteador de Autenticação / Redirecionamento Automático -->
+<script>
+  (async function verificarRedirecionamento() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramLogout = urlParams.get('logout');
+
+    // Se o usuário veio por uma ação explícita de logout, limpa a sessão local e encerra
+    if (paramLogout === 'true') {
+      localStorage.clear();
+      return;
+    }
+
+    const usuarioRaw = localStorage.getItem('usuario');
+    if (usuarioRaw) {
+      try {
+        const usuario = JSON.parse(usuarioRaw);
+        
+        // Valida com o Backend se a sessão HTTP/Cookie ainda está ativa no Spring Boot
+        const res = await fetch('http://localhost:8080/login', { 
+          method: 'GET', 
+          credentials: 'include' 
+        });
+
+        // Se o Spring Boot aceitou a sessão e o telegram já estava vinculado:
+        if (res.ok && usuario.id && usuario.telegramConectado) {
+          const tipoUsuario = (usuario.tipo || usuario.perfil || '').toUpperCase();
+          const destino = tipoUsuario === 'IDOSO' ? 'home-idoso.html' : 'home-familiar.html';
+          window.location.href = `${destino}?id=${usuario.id}&tipo=${tipoUsuario}`;
+        } else {
+          // Se a sessão no Spring Boot expirou ou não existe mais, limpa o localStorage
+          localStorage.clear();
+        }
+      } catch (e) {
+        // Se o backend estiver fora ou ocorrer um erro de parse, invalida a sessão local
+        localStorage.clear();
+      }
+    }
+  })();
+</script>
+</head>
+<body>
+
+<div class="container">
+  <h2>Vitalis Care</h2>
+  
+  <!-- Abas de Navegação -->
+  <div class="tabs">
+    <button id="btnTabLogin" class="tab-btn active" onclick="switchTab('login')">Login</button>
+    <button id="btnTabRegister" class="tab-btn" onclick="switchTab('register')">Cadastrar</button>
+  </div>
+
+  <!-- Formulario de Login -->
+  <form id="loginForm">
+    <div class="form-group">
+      <label for="loginEmail">E-mail</label>
+      <input type="email" id="loginEmail" required placeholder="ex: maria@email.com">
+    </div>
+    <div class="form-group">
+      <label for="loginSenha">Senha</label>
+      <input type="password" id="loginSenha" required placeholder="••••••••">
+    </div>
+    <button type="submit">Entrar</button>
+  </form>
+
+  <!-- Formulario de Cadastro -->
+  <form id="registerForm" class="hidden">
+    <div class="form-group">
+      <label for="regNome">Nome Completo</label>
+      <input type="text" id="regNome" required placeholder="Ex: Maria Silva">
+    </div>
+    <div class="form-group">
+      <label for="regEmail">E-mail</label>
+      <input type="email" id="regEmail" required placeholder="ex: maria@email.com">
+    </div>
+    <div class="form-group">
+      <label for="regSenha">Senha</label>
+      <input type="password" id="regSenha" required placeholder="••••••••">
+    </div>
+    <div class="form-group">
+      <label for="regTelefone">Telefone</label>
+      <input type="tel" id="regTelefone" placeholder="11988887777">
+    </div>
+    <div class="form-group">
+      <label for="regPerfil">Perfil do Usuário</label>
+      <select id="regPerfil" required>
+        <option value="" disabled selected>Selecione um perfil...</option>
+        <option value="FAMILIAR">Familiar</option>
+        <option value="IDOSO">Idoso</option>
+      </select>
+    </div>
+    <button type="submit">Criar Conta</button>
+  </form>
+
+  <!-- Caixa de Retorno / Feedback -->
+  <div id="responseMessage" class="message"></div>
+
+  <!-- Painel de Status do Usuario Logado -->
+  <div id="sessionPanel" class="user-info hidden">
+    <strong>Status da Sessão:</strong>
+    <p id="sessionDetails"></p>
+    <button onclick="checkSession()" class="btn-secondary">Atualizar Status</button>
+    <button onclick="logout()" class="btn-danger">Sair / Logout</button>
+  </div>
+</div>
+
+<script type="module" src="js/auth.js"></script>
+</body>
+</html>

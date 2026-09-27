@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vitalis - Painel do Familiar</title>
+  
+  <link rel="stylesheet" href="css/home-familiar.css">
+  
+  <!-- Biblioteca para leitura de QR Code via câmera -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Cabeçalho do Perfil -->
+    <header class="profile-header card">
+      <div class="profile-avatar-wrapper">
+        <img id="userAvatar" src="https://via.placeholder.com/100/cbd5e0/ffffff?text=User" alt="Foto de Perfil" class="profile-avatar">
+      </div>
+      <div class="profile-info">
+        <h2 id="userName">Carregando...</h2>
+        <span class="user-role-badge">Familiar</span>
+      </div>
+      <button class="btn btn-logout" onclick="fazerLogout()">Sair</button>
+    </header>
+
+    <!-- Caixa de Mensagens de Feedback Geral -->
+    <div id="responseMessage" class="alert hidden"></div>
+
+    <!-- SEÇÃO DE IDOSOS VINCULADOS -->
+    <section class="card" style="margin-bottom: 20px;">
+      <h3>Meus Idosos Vinculados</h3>
+      <div id="listaIdososVinculados" class="vinculados-grid" style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
+        <p style="color: #666;">Carregando vínculos...</p>
+      </div>
+    </section>
+
+    <!-- Seção Principal de Módulos / Opções -->
+    <main class="dashboard-section">
+      <h3>Recursos e Ferramentas</h3>
+      <p class="subtitle">Selecione uma das opções abaixo para gerenciar ou acompanhar:</p>
+
+      <div class="dashboard-grid">
+
+        <!-- Vínculo (Ativo) -->
+        <div class="dash-card" onclick="abrirModalVinculo()">
+          <div class="dash-icon">🔗</div>
+          <h4>Vínculo</h4>
+          <p>Gerencie conexões com idosos por pedido ou QR Code.</p>
+        </div>
+
+        <!-- Configurações (Ativo) -->
+        <div class="dash-card" onclick="navegarPara('configuracoes.html')">
+          <div class="dash-icon">⚙️</div>
+          <h4>Configurações</h4>
+          <p>Ajuste dados da conta, notificações e preferências.</p>
+        </div>
+
+        <!-- Medicamentos (Em breve) -->
+        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Medicamentos')">
+          <div class="dash-icon">💊</div>
+          <h4>Medicamentos</h4>
+          <p>Acompanhe horários e dosagens dos remédios.</p>
+        </div>
+
+        <!-- Eventos (Em breve) -->
+        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Eventos')">
+          <div class="dash-icon">📅</div>
+          <h4>Eventos</h4>
+          <p>Consulte consultas, rotinas e compromissos.</p>
+        </div>
+
+        <!-- Compras (Em breve) -->
+        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Compras')">
+          <div class="dash-icon">🛒</div>
+          <h4>Compras</h4>
+          <p>Lista de mantimentos e itens de necessidade.</p>
+        </div>
+
+        <!-- Jogos (Em breve) -->
+        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Jogos')">
+          <div class="dash-icon">🎮</div>
+          <h4>Jogos</h4>
+          <p>Atividades cognitivas e de estímulo para o idoso.</p>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- MODAL DE SELEÇÃO DE VÍNCULO -->
+  <div id="modalOpcoesVinculo" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3>Como deseja vincular um idoso?</h3>
+      <p class="subtitle">Escolha a opção de sua preferência:</p>
+
+      <div class="opcoes-grid">
+        <!-- Opção 1: Enviar Pedido por ID -->
+        <div class="opcao-card" onclick="redirecionarVinculo('pedido')">
+          <div class="icon">✉️</div>
+          <h4>Vínculo por Pedido</h4>
+          <p>Informe o ID do idoso e envie uma solicitação para ele aprovar.</p>
+        </div>
+
+        <!-- Opção 2: QR Code via Câmera -->
+        <div class="opcao-card" onclick="iniciarLeitorQrCode()">
+          <div class="icon">📷</div>
+          <h4>Escanear QR Code</h4>
+          <p>Abra a câmera do dispositivo para ler o QR Code do idoso.</p>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary btn-fechar" onclick="fecharModalVinculo()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DO SCANNER DA CÂMERA (GARANTIDO AINDA FECHADO) -->
+  <div id="modalScanner" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 500px; width: 90%; text-align: center;">
+      <h3>Escanear QR Code do Idoso</h3>
+      <p class="subtitle">Aponte a câmera para a imagem do QR Code:</p>
+      
+      <!-- Contêiner do Vídeo da Câmera -->
+      <div id="qr-reader" style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; margin: 15px 0;"></div>
+      
+      <!-- Feedback visual de processamento -->
+      <div id="statusVinculoScanner" class="alert hidden" style="margin-bottom: 15px;"></div>
+
+      <button id="btnFecharScanner" type="button" class="btn btn-secondary btn-fechar" onclick="fecharScannerQrCode(true)">Cancelar / Fechar</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/home-familiar.js"></script>
+</body>
+</html>

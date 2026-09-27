@@ -5,6 +5,8 @@ const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 const btnTabLogin = document.getElementById('btnTabLogin');
 const btnTabRegister = document.getElementById('btnTabRegister');
+const btnCheckSession = document.getElementById('btnCheckSession');
+const btnLogout = document.getElementById('btnLogout');
 const msgDiv = document.getElementById('responseMessage');
 
 /**
@@ -59,9 +61,11 @@ function redirecionarParaHome(tipo, id) {
   }
 }
 
-// Event Listeners das Abas
+// Event Listeners das Abas e Botões
 btnTabLogin?.addEventListener('click', () => switchTab('login'));
 btnTabRegister?.addEventListener('click', () => switchTab('register'));
+btnCheckSession?.addEventListener('click', checkSession);
+btnLogout?.addEventListener('click', logout);
 
 // 1. EXECUTA O CADASTRO DE USUÁRIO
 registerForm?.addEventListener('submit', async (e) => {
@@ -93,7 +97,6 @@ registerForm?.addEventListener('submit', async (e) => {
   try {
     if (submitBtn) submitBtn.disabled = true;
 
-    // Rota direta para criação de usuário (evita duplicação /login/register)
     const response = await fetch(`${API_BASE_URL}/usuarios`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -159,7 +162,6 @@ loginForm?.addEventListener('submit', async (e) => {
       localStorage.setItem('userTipo', userTipo);
       localStorage.setItem('userNome', userNome);
 
-      // Consulta status atual do Telegram
       let telegramConectado = Boolean(responseData.telegramConectado);
 
       try {
@@ -185,7 +187,6 @@ loginForm?.addEventListener('submit', async (e) => {
 
       showMessage('Login realizado com sucesso! Entrando...', true);
 
-      // Roteamento de acordo com o estado do Telegram
       setTimeout(() => {
         if (telegramConectado) {
           redirecionarParaHome(userTipo, userId);
@@ -252,9 +253,9 @@ async function logout() {
   }
 }
 
-// Exposição global
+// Exposição global limpa para o escopo window
 window.logout = logout;
+window.checkSession = checkSession;
 
-// Executa verificação inicial
+// Executa verificação inicial de sessão
 checkSession();
-// No final do js/index.js

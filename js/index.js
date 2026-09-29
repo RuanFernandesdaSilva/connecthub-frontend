@@ -10,6 +10,21 @@ const btnLogout = document.getElementById('btnLogout');
 const msgDiv = document.getElementById('responseMessage');
 
 /**
+ * Helper para extrair mensagem e dados da resposta sem consumir a stream mais de uma vez.
+ */
+async function parseResponseBody(response) {
+  const rawText = await response.text();
+  if (!rawText) return { data: null, text: '' };
+
+  try {
+    const json = JSON.parse(rawText);
+    return { data: json, text: rawText };
+  } catch {
+    return { data: null, text: rawText };
+  }
+}
+
+/**
  * Exibe mensagem de feedback para o usuário.
  */
 function showMessage(text, isSuccess) {
@@ -61,7 +76,7 @@ function redirecionarParaHome(tipo, id) {
   }
 }
 
-// Event Listeners das Abas e Botões
+// Event Listeners
 btnTabLogin?.addEventListener('click', () => switchTab('login'));
 btnTabRegister?.addEventListener('click', () => switchTab('register'));
 btnCheckSession?.addEventListener('click', checkSession);
@@ -73,7 +88,7 @@ registerForm?.addEventListener('submit', async (e) => {
   hideMessage();
 
   const submitBtn = registerForm.querySelector('button[type="submit"]');
-  
+
   const nome = document.getElementById('regNome')?.value.trim();
   const email = document.getElementById('regEmail')?.value.trim();
   const senha = document.getElementById('regSenha')?.value;
@@ -104,13 +119,9 @@ registerForm?.addEventListener('submit', async (e) => {
       body: JSON.stringify(bodyData)
     });
 
-    let msgText = '';
-    try {
-      const jsonRes = await response.json();
-      msgText = jsonRes.mensagem || jsonRes.message || 'Operação concluída.';
-    } catch {
-      msgText = await response.text();
-    }
+    // Leitura segura do corpo (apenas uma única leitura da stream)
+    const { data: jsonRes, text: rawText } = await parseResponseBody(response);
+    const msgText = jsonRes?.mensagem || jsonRes?.message || rawText;
 
     if (response.ok || response.status === 201) {
       showMessage(msgText || 'Cadastro realizado com sucesso!', true);
@@ -121,7 +132,7 @@ registerForm?.addEventListener('submit', async (e) => {
     }
   } catch (error) {
     console.error('Erro no cadastro:', error);
-    showMessage('Erro ao conectar com o servidor Spring Boot!', false);
+    showMessage('Erro ao conectar com o servidor (O Render pode estar acordando). Tente novamente.', false);
   } finally {
     if (submitBtn) submitBtn.disabled = false;
   }
@@ -151,18 +162,20 @@ loginForm?.addEventListener('submit', async (e) => {
       body: JSON.stringify({ email, senha })
     });
 
-    if (response.ok) {
-      const responseData = await response.json();
+    // Leitura única e segura do corpo da resposta
+    const { data: responseData, text: rawText } = await parseResponseBody(response);
 
-      const userId = responseData.id;
-      const userTipo = (responseData.tipo || responseData.perfil || '').toUpperCase().replace('ROLE_', '');
-      const userNome = responseData.nome || 'Usuário';
+    // Se o login foi bem sucedido (HTTP 200 OK)
+    if (response.ok) {
+      const userId = responseData?.id;
+      const userTipo = (responseData?.tipo || responseData?.perfil || '').toUpperCase().replace('ROLE_', '');
+      const userNome = responseData?.nome || 'Usuário';
 
       localStorage.setItem('userId', userId);
       localStorage.setItem('userTipo', userTipo);
       localStorage.setItem('userNome', userNome);
 
-      let telegramConectado = Boolean(responseData.telegramConectado);
+      let telegramConectado = Boolean(responseData?.telegramConectado);
 
       try {
         const statusRes = await fetch(`${API_BASE_URL}/usuarios/${userId}/status-telegram`, {
@@ -170,8 +183,10 @@ loginForm?.addEventListener('submit', async (e) => {
           credentials: 'include'
         });
         if (statusRes.ok) {
-          const statusData = await statusRes.json();
-          telegramConectado = Boolean(statusData.telegramConectado);
+          const { data: statusData } = await parseResponseBody(statusRes);
+          if (statusData) {
+            telegramConectado = Boolean(statusData.telegramConectado);
+          }
         }
       } catch (errStatus) {
         console.warn('Não foi possível verificar status do Telegram:', errStatus);
@@ -196,18 +211,18 @@ loginForm?.addEventListener('submit', async (e) => {
       }, 1000);
 
     } else {
-      let msgText = '';
-      try {
-        const jsonRes = await response.json();
-        msgText = jsonRes.mensagem || jsonRes.message;
-      } catch {
-        msgText = await response.text();
+      // Se retornou 401 ou outro erro
+      const msgText = responseData?.mensagem || responseData?.message || rawText;
+
+      if (response.status === 401) {
+        showMessage('E-mail ou senha incorretos.', false);
+      } else {
+        showMessage(msgText || `Erro no login (${response.status})`, false);
       }
-      showMessage(msgText || 'E-mail ou senha incorretos.', false);
     }
   } catch (error) {
     console.error('Erro no login:', error);
-    showMessage('Erro de conexão ao efetuar login.', false);
+    showMessage('Erro ao conectar com o servidor. Verifique sua conexão.', false);
   } finally {
     if (submitBtn) submitBtn.disabled = false;
   }
@@ -225,7 +240,7 @@ async function checkSession() {
     const sessionDetails = document.getElementById('sessionDetails');
 
     if (response.ok) {
-      const infoText = await response.text();
+      const { text: infoText } = await parseResponseBody(response);
       if (sessionDetails) sessionDetails.textContent = infoText;
       if (sessionPanel) sessionPanel.classList.remove('hidden');
     } else {
@@ -253,9 +268,8 @@ async function logout() {
   }
 }
 
-// Exposição global limpa para o escopo window
+// Exposição global
 window.logout = logout;
 window.checkSession = checkSession;
 
-// Executa verificação inicial de sessão
 checkSession();

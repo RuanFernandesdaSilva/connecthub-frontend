@@ -1,6 +1,5 @@
 import { API_BASE_URL, API_AUTH_URL } from './config.js';
 
-// Cache dos elementos do DOM
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 const btnTabLogin = document.getElementById('btnTabLogin');
@@ -9,9 +8,6 @@ const btnCheckSession = document.getElementById('btnCheckSession');
 const btnLogout = document.getElementById('btnLogout');
 const msgDiv = document.getElementById('responseMessage');
 
-/**
- * Helper para extrair mensagem e dados da resposta sem consumir a stream mais de uma vez.
- */
 async function parseResponseBody(response) {
   const rawText = await response.text();
   if (!rawText) return { data: null, text: '' };
@@ -24,9 +20,6 @@ async function parseResponseBody(response) {
   }
 }
 
-/**
- * Exibe mensagem de feedback para o usuário.
- */
 function showMessage(text, isSuccess) {
   if (msgDiv) {
     msgDiv.textContent = text;
@@ -35,9 +28,6 @@ function showMessage(text, isSuccess) {
   }
 }
 
-/**
- * Oculta o painel de mensagens.
- */
 function hideMessage() {
   if (msgDiv) {
     msgDiv.style.display = 'none';
@@ -45,9 +35,6 @@ function hideMessage() {
   }
 }
 
-/**
- * Alterna entre as abas de Login e Cadastro.
- */
 function switchTab(tab) {
   hideMessage();
 
@@ -64,9 +51,6 @@ function switchTab(tab) {
   }
 }
 
-/**
- * Redireciona o usuário para a Home correspondente.
- */
 function redirecionarParaHome(tipo, id) {
   const perfil = (tipo || '').toUpperCase().replace('ROLE_', '');
   if (perfil === 'IDOSO') {
@@ -76,13 +60,12 @@ function redirecionarParaHome(tipo, id) {
   }
 }
 
-// Event Listeners
 btnTabLogin?.addEventListener('click', () => switchTab('login'));
 btnTabRegister?.addEventListener('click', () => switchTab('register'));
 btnCheckSession?.addEventListener('click', checkSession);
 btnLogout?.addEventListener('click', logout);
 
-// 1. EXECUTA O CADASTRO DE USUÁRIO
+// CADASTRO DE USUÁRIO (Ajustado para API_AUTH_URL + '/register')
 registerForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   hideMessage();
@@ -112,14 +95,14 @@ registerForm?.addEventListener('submit', async (e) => {
   try {
     if (submitBtn) submitBtn.disabled = true;
 
-    const response = await fetch(`${API_BASE_URL}/usuarios`, {
+    // Rota alterada de `${API_BASE_URL}/usuarios` para `${API_AUTH_URL}/register`
+    const response = await fetch(`${API_AUTH_URL}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(bodyData)
     });
 
-    // Leitura segura do corpo (apenas uma única leitura da stream)
     const { data: jsonRes, text: rawText } = await parseResponseBody(response);
     const msgText = jsonRes?.mensagem || jsonRes?.message || rawText;
 
@@ -138,7 +121,7 @@ registerForm?.addEventListener('submit', async (e) => {
   }
 });
 
-// 2. EXECUTA O LOGIN DE USUÁRIO
+// LOGIN
 loginForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   hideMessage();
@@ -162,10 +145,8 @@ loginForm?.addEventListener('submit', async (e) => {
       body: JSON.stringify({ email, senha })
     });
 
-    // Leitura única e segura do corpo da resposta
     const { data: responseData, text: rawText } = await parseResponseBody(response);
 
-    // Se o login foi bem sucedido (HTTP 200 OK)
     if (response.ok) {
       const userId = responseData?.id;
       const userTipo = (responseData?.tipo || responseData?.perfil || '').toUpperCase().replace('ROLE_', '');
@@ -211,7 +192,6 @@ loginForm?.addEventListener('submit', async (e) => {
       }, 1000);
 
     } else {
-      // Se retornou 401 ou outro erro
       const msgText = responseData?.mensagem || responseData?.message || rawText;
 
       if (response.status === 401) {
@@ -228,7 +208,6 @@ loginForm?.addEventListener('submit', async (e) => {
   }
 });
 
-// 3. VERIFICA SESSÃO ATIVA
 async function checkSession() {
   try {
     const response = await fetch(API_AUTH_URL, {
@@ -251,7 +230,6 @@ async function checkSession() {
   }
 }
 
-// 4. LOGOUT
 async function logout() {
   try {
     await fetch(`${API_AUTH_URL}/logout`, {
@@ -268,7 +246,6 @@ async function logout() {
   }
 }
 
-// Exposição global
 window.logout = logout;
 window.checkSession = checkSession;
 

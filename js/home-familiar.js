@@ -5,10 +5,34 @@ let html5QrCodeScanner = null;
 /**
  * Obtém as informações da sessão do usuário logado.
  */
+/**
+ * Obtém as informações da sessão do usuário logado (prioriza URL vinda do Telegram).
+ */
 function getSessaoUsuario() {
+  // 1. CAPTURA PARÂMETROS DA URL (Ex: home-familiar.html?id=15&tipo=FAMILIAR)
+  const urlParams = new URLSearchParams(window.location.search);
+  const idUrl = urlParams.get('id');
+  const tipoUrl = urlParams.get('tipo');
+
+  if (idUrl) {
+    const usuarioUrl = {
+      id: parseInt(idUrl, 10),
+      tipo: (tipoUrl || 'FAMILIAR').toUpperCase().replace('ROLE_', '')
+    };
+
+    // Salva imediatamente no localStorage para garantir persistência durante a navegação
+    localStorage.setItem('userId', idUrl);
+    localStorage.setItem('userTipo', usuarioUrl.tipo);
+    localStorage.setItem('usuario', JSON.stringify(usuarioUrl));
+
+    return { usuario: usuarioUrl, idFamiliar: idUrl, tipo: usuarioUrl.tipo };
+  }
+
+  // 2. FALLBACK PARA LOCALSTORAGE (Navegação normal fora do Telegram ou já inicializada)
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
   const idFamiliar = usuario.id || localStorage.getItem('userId');
   const tipo = (usuario.tipo || localStorage.getItem('userTipo') || '').toUpperCase().replace('ROLE_', '');
+  
   return { usuario, idFamiliar, tipo };
 }
 

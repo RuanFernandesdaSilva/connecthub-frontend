@@ -20,7 +20,31 @@ function escapeHtml(str) {
 /**
  * Carrega e valida os dados de sessão salvos localmente no navegador.
  */
+/**
+ * Carrega e valida os dados de sessão salvos localmente ou vindo dos parâmetros da URL (Telegram/Web App).
+ */
 function carregarSessaoLocal() {
+  // 1. CAPTURA PARÂMETROS DA URL (Ex: home-idoso.html?id=15&tipo=IDOSO)
+  const urlParams = new URLSearchParams(window.location.search);
+  const idUrl = urlParams.get('id');
+  const tipoUrl = urlParams.get('tipo');
+
+  // Se veio ID via URL (link do botão do Telegram)
+  if (idUrl) {
+    usuarioLogado = {
+      id: parseInt(idUrl, 10),
+      nome: localStorage.getItem('userNome') || 'Idoso',
+      tipo: (tipoUrl || 'IDOSO').toUpperCase()
+    };
+
+    // Salva no localStorage para manter logado durante a navegação interna
+    localStorage.setItem('userId', idUrl);
+    localStorage.setItem('userTipo', usuarioLogado.tipo);
+    localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
+    return;
+  }
+
+  // 2. CASO NÃO TENHA NA URL, BUSCA NO LOCALSTORAGE EXISTENTE
   const usuarioSalvo = localStorage.getItem('usuario');
   if (usuarioSalvo) {
     try {

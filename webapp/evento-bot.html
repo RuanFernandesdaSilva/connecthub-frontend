@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel de Eventos</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
@@ -20,13 +21,15 @@
 
   <div id="divConcluido" style="display: none;">
     <h3>✅ Eventos Ativados com Sucesso!</h3>
-    <!-- Botão de retorno direto ao ConnectHubSpoke_bot -->
     <button class="btn btn-blue" onclick="voltarParaCentral()">⬅️ Voltar para a Central</button>
   </div>
 
   <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    const tg = window.Telegram ? window.Telegram.WebApp : null;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || '';
@@ -39,19 +42,25 @@
     }
 
     function ativar() {
-      tg.openTelegramLink(`https://t.me/NotificaEventoBot?start=${token}`);
-      setTimeout(() => { tg.close(); }, 300);
+      const targetUrl = `https://t.me/NotificaEventoBot?start=${encodeURIComponent(token)}`;
+      if (tg && tg.openTelegramLink) {
+        tg.openTelegramLink(targetUrl);
+      } else {
+        window.location.href = targetUrl;
+      }
     }
 
     function voltarParaCentral() {
-      // Anexa a tag _EVT para registrar o vínculo do bot de eventos no backend
       const tokenComTag = token ? `${token}_EVT` : '';
       const linkCentral = tokenComTag 
         ? `https://t.me/${hubUsername}?start=${encodeURIComponent(tokenComTag)}`
         : `https://t.me/${hubUsername}`;
 
-      tg.openTelegramLink(linkCentral);
-      setTimeout(() => { tg.close(); }, 300);
+      if (tg && tg.openTelegramLink) {
+        tg.openTelegramLink(linkCentral);
+      } else {
+        window.location.href = linkCentral;
+      }
     }
   </script>
 </body>

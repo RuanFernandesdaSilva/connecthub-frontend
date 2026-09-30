@@ -1,4 +1,4 @@
-import { API_VINCULO_URL, API_AUTH_URL } from './config.js';
+import { API_BASE_URL, API_VINCULO_URL, API_AUTH_URL } from './config.js';
 
 let html5QrCodeScanner = null;
 
@@ -68,19 +68,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   let sessao = getSessaoUsuario();
 
   // Tenta validar no servidor se houver cookie, mas NÃO faz logout se falhar e já houver ID local
-  try {
-    const res = await fetch(API_AUTH_URL, { method: 'GET', credentials: 'include' });
-    if (res.ok) {
-      const usuarioApi = await res.json();
-      if (usuarioApi && usuarioApi.id) {
-        localStorage.setItem('userId', usuarioApi.id);
-        localStorage.setItem('userTipo', usuarioApi.tipo || 'FAMILIAR');
-        localStorage.setItem('usuario', JSON.stringify(usuarioApi));
-        sessao = getSessaoUsuario();
+  if (!sessao.idFamiliar) {
+    try {
+      const res = await fetch(API_AUTH_URL, { method: 'GET', credentials: 'include' });
+      if (res.ok) {
+        const usuarioApi = await res.json();
+        if (usuarioApi && usuarioApi.id) {
+          localStorage.setItem('userId', usuarioApi.id);
+          localStorage.setItem('userTipo', usuarioApi.tipo || 'FAMILIAR');
+          localStorage.setItem('usuario', JSON.stringify(usuarioApi));
+          sessao = getSessaoUsuario();
+        }
       }
+    } catch (e) {
+      console.warn('Servidor offline ou sem sessão de cookie. Mantendo sessão via ID local/URL.');
     }
-  } catch (e) {
-    console.warn('Servidor offline ou sem sessão de cookie. Mantendo sessão via ID local/URL.');
   }
 
   // Se não houver ID por nenhum meio, aí sim vai para a tela de login
@@ -92,12 +94,77 @@ document.addEventListener('DOMContentLoaded', async () => {
   fecharModalVinculo();
   fecharScannerQrCode(true);
 
-  if (typeof window.carregarDadosPerfil === 'function') {
-    window.carregarDadosPerfil();
-  }
+  // Executa o carregamento dos dados na interface
+  carregarDadosPerfil();
 });
 
-// 2. MODAL DE OPÇÕES DE VÍNCULO
+// 2. CARREGAMENTO DOS DADOS DO PERFIL E IDOSOS VINCULADOS
+async function carregarDadosPerfil() {
+  const { idFamiliar, usuario } = getSessaoUsuario();
+
+  const elemNome = document.getElementById('userName');
+  const elemAvatar = document.getElementById('userAvatar');
+
+  if (elemNome) {
+    elemNome.textContent = usuario.nome || `Familiar #${idFamiliar}`;
+  }
+
+  if (elemAvatar && (usuario.fotoUrl || usuario.imagemUrl)) {
+    elemAvatar.src = usuario.fotoUrl || usuario.imagemUrl;
+  }
+
+  carregarIdososVinculados(idFamiliar);
+}
+
+async function carregarIdososVinculados(idFamiliar) {
+  const container = document.getElementById('listaIdososVinculados');
+  if (!container) return;
+
+  try {
+    const endpoint = API_VINCULO_URL 
+      ? `${API_VINCULO_URL}/familiar/${idFamiliar}`
+      : `${API_BASE_URL}/api/vinculos/familiar/${idFamiliar}`;
+
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      const idosos = await response.json();
+
+      if (!Array.isArray(idosos) || idosos.length === 0) {
+        container.innerHTML = '<p style="color: #666;">Nenhum idoso vinculado ainda.</p>';
+        return;
+      }
+
+      const defaultAvatar = 'https://via.placeholder.com/100/cbd5e0/ffffff?text=User';
+
+      container.innerHTML = idosos.map(idoso => {
+        const nome = idoso.nome || 'Idoso';
+        const foto = idoso.fotoUrl || idoso.imagemUrl || defaultAvatar;
+
+        return `
+          <div class="card-idoso" style="border: 1px solid #cbd5e0; padding: 10px 15px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; gap: 10px;">
+            <img src="${foto}" alt="${nome}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+            <div>
+              <strong style="display: block; font-size: 0.95rem; color: #2d3748;">${nome}</strong>
+              <small style="color: #64748b;">ID: ${idoso.id}</small>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      container.innerHTML = '<p style="color: #666;">Nenhum idoso vinculado ainda.</p>';
+    }
+  } catch (error) {
+    console.error('Erro ao carregar idosos vinculados:', error);
+    container.innerHTML = '<p style="color: #e53e3e;">Erro ao carregar vínculos.</p>';
+  }
+}
+
+// 3. MODAL DE OPÇÕES DE VÍNCULO
 function abrirModalVinculo() {
   const modal = document.getElementById('modalOpcoesVinculo');
   if (modal) {
@@ -119,7 +186,7 @@ function redirecionarVinculo(tipo) {
   window.location.href = `vinculo.html?aba=${tipo}`;
 }
 
-// 3. LEITOR DE QR CODE
+// 4. LEITOR DE QR CODE
 function iniciarLeitorQrCode() {
   fecharModalVinculo();
 
@@ -227,7 +294,7 @@ function exibirStatusScanner(texto, tipo) {
   }
 }
 
-// 4. NAVEGAÇÃO E UTILITÁRIOS
+// 5. NAVEGAÇÃO E UTILITÁRIOS
 function mostrarAvisoEmBreve(modulo) {
   alert(`O módulo de ${modulo} estará disponível em breve!`);
 }
@@ -242,6 +309,7 @@ function fazerLogout() {
 }
 
 // Exposição global para chamadas inline HTML (onclick)
+window.carregarDadosPerfil = carregarDadosPerfil;
 window.abrirModalVinculo = abrirModalVinculo;
 window.fecharModalVinculo = fecharModalVinculo;
 window.redirecionarVinculo = redirecionarVinculo;

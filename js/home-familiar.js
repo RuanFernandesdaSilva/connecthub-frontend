@@ -68,21 +68,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   let sessao = getSessaoUsuario();
 
   // Tenta validar no servidor se houver cookie, mas NÃO faz logout se falhar e já houver ID local
-  if (!sessao.idFamiliar) {
-    try {
-      const res = await fetch(API_AUTH_URL, { method: 'GET', credentials: 'include' });
-      if (res.ok) {
-        const usuarioApi = await res.json();
-        if (usuarioApi && usuarioApi.id) {
-          localStorage.setItem('userId', usuarioApi.id);
-          localStorage.setItem('userTipo', usuarioApi.tipo || 'FAMILIAR');
-          localStorage.setItem('usuario', JSON.stringify(usuarioApi));
-          sessao = getSessaoUsuario();
-        }
+  try {
+    const res = await fetch(API_AUTH_URL, { method: 'GET', credentials: 'include' });
+    if (res.ok) {
+      const usuarioApi = await res.json();
+      if (usuarioApi && usuarioApi.id) {
+        localStorage.setItem('userId', usuarioApi.id);
+        localStorage.setItem('userTipo', usuarioApi.tipo || 'FAMILIAR');
+        localStorage.setItem('usuario', JSON.stringify(usuarioApi));
+        sessao = getSessaoUsuario();
       }
-    } catch (e) {
-      console.warn('Servidor offline ou sem sessão de cookie. Mantendo sessão via ID local/URL.');
     }
+  } catch (e) {
+    console.warn('Servidor offline ou sem sessão de cookie. Mantendo sessão via ID local/URL.');
   }
 
   // Se não houver ID por nenhum meio, aí sim vai para a tela de login
@@ -94,11 +92,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   fecharModalVinculo();
   fecharScannerQrCode(true);
 
-  // Executa o carregamento dos dados na interface
-  carregarDadosPerfil();
+  if (typeof window.carregarDadosPerfil === 'function') {
+    window.carregarDadosPerfil();
+  }
 });
 
-// 2. CARREGAMENTO DOS DADOS DO PERFIL E IDOSOS VINCULADOS
+// ADICIONADO: Funções necessárias para carregar dados do perfil e idosos vinculados
 async function carregarDadosPerfil() {
   const { idFamiliar, usuario } = getSessaoUsuario();
 
@@ -164,7 +163,7 @@ async function carregarIdososVinculados(idFamiliar) {
   }
 }
 
-// 3. MODAL DE OPÇÕES DE VÍNCULO
+// 2. MODAL DE OPÇÕES DE VÍNCULO
 function abrirModalVinculo() {
   const modal = document.getElementById('modalOpcoesVinculo');
   if (modal) {
@@ -186,7 +185,7 @@ function redirecionarVinculo(tipo) {
   window.location.href = `vinculo.html?aba=${tipo}`;
 }
 
-// 4. LEITOR DE QR CODE
+// 3. LEITOR DE QR CODE
 function iniciarLeitorQrCode() {
   fecharModalVinculo();
 
@@ -294,7 +293,7 @@ function exibirStatusScanner(texto, tipo) {
   }
 }
 
-// 5. NAVEGAÇÃO E UTILITÁRIOS
+// 4. NAVEGAÇÃO E UTILITÁRIOS
 function mostrarAvisoEmBreve(modulo) {
   alert(`O módulo de ${modulo} estará disponível em breve!`);
 }
@@ -309,7 +308,7 @@ function fazerLogout() {
 }
 
 // Exposição global para chamadas inline HTML (onclick)
-window.carregarDadosPerfil = carregarDadosPerfil;
+window.carregarDadosPerfil = carregarDadosPerfil; // ADICIONADO: registro global da função
 window.abrirModalVinculo = abrirModalVinculo;
 window.fecharModalVinculo = fecharModalVinculo;
 window.redirecionarVinculo = redirecionarVinculo;

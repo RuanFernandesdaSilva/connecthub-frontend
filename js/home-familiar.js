@@ -3,13 +3,33 @@ import { API_VINCULO_URL, API_AUTH_URL } from './config.js';
 let html5QrCodeScanner = null;
 
 /**
+ * Função utilitária para encerrar o WebApp do Telegram.
+ * Fecha o mini app diretamente na interface do Telegram ou a janela do navegador.
+ */
+function fecharEFinalizarWebApp() {
+  if (window.Telegram && window.Telegram.WebApp) {
+    window.Telegram.WebApp.close();
+  } else {
+    window.close();
+  }
+}
+
+/**
  * Obtém e consolida as informações da sessão do usuário.
- * Prioriza parâmetros na URL (?id=...&tipo=...), caindo para localStorage se não existirem.
+ * Limpa o cache se um ID diferente vier na URL (Solução 2).
  */
 function getSessaoUsuario() {
   const urlParams = new URLSearchParams(window.location.search);
   const idUrl = urlParams.get('id');
   const tipoUrl = urlParams.get('tipo');
+
+  const idSalvo = localStorage.getItem('userId');
+
+  // SOLUÇÃO 2: Se um novo ID vier pela URL e for diferente do salvo, apaga a sessão antiga imediatamente
+  if (idUrl && idSalvo && idUrl !== idSalvo) {
+    console.warn('Novo usuário detectado na URL! Limpando cache do usuário anterior...');
+    localStorage.clear();
+  }
 
   // 1. Veio via parâmetros de URL (Ex: Link vindo do Telegram)
   if (idUrl) {
@@ -39,6 +59,12 @@ function getSessaoUsuario() {
 
 // 1. INICIALIZAÇÃO DA PÁGINA
 document.addEventListener('DOMContentLoaded', async () => {
+  // Inicializa a SDK do Telegram WebApp se disponível
+  if (window.Telegram && window.Telegram.WebApp) {
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand(); // Expande o WebApp para tela cheia se necessário
+  }
+
   let sessao = getSessaoUsuario();
 
   // Tenta validar no servidor se houver cookie, mas NÃO faz logout se falhar e já houver ID local
@@ -154,7 +180,8 @@ async function onScanSuccess(decodedText) {
       exibirStatusScanner('Vínculo realizado com sucesso!', 'sucesso');
       setTimeout(async () => {
         await fecharScannerQrCode(true);
-        window.location.reload();
+        // SOLUÇÃO 1: Fecha a tela do WebApp do Telegram após vincular
+        fecharEFinalizarWebApp();
       }, 1500);
     } else {
       const erroText = await response.text();
@@ -211,7 +238,7 @@ function navegarPara(url) {
 
 function fazerLogout() {
   localStorage.clear();
-  window.location.href = 'index.html';
+  fecharEFinalizarWebApp(); // Fecha o WebApp no logout em vez de apenas navegar
 }
 
 // Exposição global para chamadas inline HTML (onclick)
@@ -223,3 +250,4 @@ window.fecharScannerQrCode = fecharScannerQrCode;
 window.mostrarAvisoEmBreve = mostrarAvisoEmBreve;
 window.navegarPara = navegarPara;
 window.fazerLogout = fazerLogout;
+window.fecharEFinalizarWebApp = fecharEFinalizarWebApp;

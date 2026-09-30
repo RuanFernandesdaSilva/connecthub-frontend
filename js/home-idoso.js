@@ -15,12 +15,32 @@ function escapeHtml(str) {
 }
 
 /**
+ * Função utilitária para encerrar a janela do WebApp no Telegram (Solução 1).
+ */
+function fecharEFinalizarWebApp() {
+  if (window.Telegram && window.Telegram.WebApp) {
+    window.Telegram.WebApp.close();
+  } else {
+    window.close();
+  }
+}
+
+/**
  * Lê e consolida a sessão local do navegador ou vinda da URL.
+ * Limpa o cache se um ID diferente vier na URL (Solução 2).
  */
 function carregarSessaoLocal() {
   const urlParams = new URLSearchParams(window.location.search);
   const idUrl = urlParams.get('id');
   const tipoUrl = urlParams.get('tipo');
+
+  const idSalvo = localStorage.getItem('userId');
+
+  // SOLUÇÃO 2: Se vier um novo ID pela URL e for diferente do salvo, apaga os dados antigos imediatamente
+  if (idUrl && idSalvo && idUrl !== idSalvo) {
+    console.warn('Novo usuário detectado na URL! Limpando cache do usuário anterior...');
+    localStorage.clear();
+  }
 
   // 1. Se veio ID via parâmetros na URL (Botão do Telegram)
   if (idUrl) {
@@ -77,6 +97,12 @@ function parseSessaoTexto(texto) {
 
 // 1. INICIALIZAÇÃO DA PÁGINA
 async function inicializarHomeIdoso() {
+  // Inicializa a SDK do Telegram WebApp se disponível
+  if (window.Telegram && window.Telegram.WebApp) {
+    window.Telegram.WebApp.ready();
+    window.Telegram.WebApp.expand();
+  }
+
   // Carrega primeiros dados locais/URL
   carregarSessaoLocal();
 
@@ -225,7 +251,7 @@ async function fazerLogout() {
     console.warn('Erro ao encerrar sessão no servidor:', e);
   } finally {
     localStorage.clear();
-    window.location.href = 'index.html?logout=true';
+    fecharEFinalizarWebApp(); // Fecha o aplicativo WebApp ao sair
   }
 }
 
@@ -241,3 +267,4 @@ window.irParaQRCode = irParaQRCode;
 window.navegarPara = navegarPara;
 window.mostrarAvisoEmBreve = mostrarAvisoEmBreve;
 window.fazerLogout = fazerLogout;
+window.fecharEFinalizarWebApp = fecharEFinalizarWebApp;

@@ -146,7 +146,7 @@ function voltarParaAplicativo() {
   } else if (userTipo === 'FAMILIAR') {
     window.location.href = 'home-familiar.html';
   } else {
-    window.location.href = 'auth.html';
+    window.location.href = 'index.html';
   }
 }
 

@@ -109,7 +109,7 @@ async function inicializarTela() {
 function exibirSessaoInvalida() {
   const statusContainer = document.getElementById('sessionStatus');
   if (statusContainer) {
-    statusContainer.innerHTML = '<p class="alert-erro">Você precisa estar logado para acessar esta página. <a href="auth.html">Fazer Login</a></p>';
+    statusContainer.innerHTML = '<p class="alert-erro">Você precisa estar logado para acessar esta página. <a href="index.html">Fazer Login</a></p>';
   }
 }
 

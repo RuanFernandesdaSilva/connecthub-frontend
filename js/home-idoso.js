@@ -200,13 +200,13 @@ async function fazerLogout() {
     console.warn('Erro ao encerrar sessão no servidor:', e);
   } finally {
     localStorage.clear();
-    window.location.href = 'auth.html?logout=true';
+    window.location.href = 'index.html?logout=true';
   }
 }
 
 function redirecionarParaLogin() {
   localStorage.clear();
-  window.location.href = 'auth.html';
+  window.location.href = 'index.html';
 }
 
 document.addEventListener('DOMContentLoaded', inicializarHomeIdoso);

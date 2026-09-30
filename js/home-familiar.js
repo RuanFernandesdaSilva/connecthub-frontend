@@ -173,7 +173,7 @@ function navegarPara(url) {
 
 function fazerLogout() {
   localStorage.clear();
-  window.location.href = 'auth.html';
+  window.location.href = 'index.html';
 }
 
 // Exposição explícita para manipuladores inline no HTML (onclick)

@@ -1,46 +1,64 @@
-import { API_VINCULO_URL } from './config.js';
+import { API_VINCULO_URL, API_AUTH_URL } from './config.js';
 
 let html5QrCodeScanner = null;
 
 /**
- * Obtém as informações da sessão do usuário logado.
- */
-/**
- * Obtém as informações da sessão do usuário logado (prioriza URL vinda do Telegram).
+ * Obtém e consolida as informações da sessão do usuário.
+ * Prioriza parâmetros na URL (?id=...&tipo=...), caindo para localStorage se não existirem.
  */
 function getSessaoUsuario() {
-  // 1. CAPTURA PARÂMETROS DA URL (Ex: home-familiar.html?id=15&tipo=FAMILIAR)
   const urlParams = new URLSearchParams(window.location.search);
   const idUrl = urlParams.get('id');
   const tipoUrl = urlParams.get('tipo');
 
+  // 1. Veio via parâmetros de URL (Ex: Link vindo do Telegram)
   if (idUrl) {
     const usuarioUrl = {
       id: parseInt(idUrl, 10),
       tipo: (tipoUrl || 'FAMILIAR').toUpperCase().replace('ROLE_', '')
     };
 
-    // Salva imediatamente no localStorage para garantir persistência durante a navegação
+    // Grava no localStorage do navegador para persistência contínua
     localStorage.setItem('userId', idUrl);
     localStorage.setItem('userTipo', usuarioUrl.tipo);
     localStorage.setItem('usuario', JSON.stringify(usuarioUrl));
 
+    // Limpa a URL visualmente para manter a navegação limpa no navegador
+    window.history.replaceState({}, document.title, window.location.pathname);
+
     return { usuario: usuarioUrl, idFamiliar: idUrl, tipo: usuarioUrl.tipo };
   }
 
-  // 2. FALLBACK PARA LOCALSTORAGE (Navegação normal fora do Telegram ou já inicializada)
+  // 2. Fallback para o localStorage
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
   const idFamiliar = usuario.id || localStorage.getItem('userId');
   const tipo = (usuario.tipo || localStorage.getItem('userTipo') || '').toUpperCase().replace('ROLE_', '');
-  
+
   return { usuario, idFamiliar, tipo };
 }
 
-// 1. INICIALIZAÇÃO DA PÁGINA E CONTROLE DE MODAIS
-document.addEventListener('DOMContentLoaded', () => {
-  const { idFamiliar } = getSessaoUsuario();
+// 1. INICIALIZAÇÃO DA PÁGINA
+document.addEventListener('DOMContentLoaded', async () => {
+  let sessao = getSessaoUsuario();
 
-  if (!idFamiliar) {
+  // Tenta validar no servidor se houver cookie, mas NÃO faz logout se falhar e já houver ID local
+  try {
+    const res = await fetch(API_AUTH_URL, { method: 'GET', credentials: 'include' });
+    if (res.ok) {
+      const usuarioApi = await res.json();
+      if (usuarioApi && usuarioApi.id) {
+        localStorage.setItem('userId', usuarioApi.id);
+        localStorage.setItem('userTipo', usuarioApi.tipo || 'FAMILIAR');
+        localStorage.setItem('usuario', JSON.stringify(usuarioApi));
+        sessao = getSessaoUsuario();
+      }
+    }
+  } catch (e) {
+    console.warn('Servidor offline ou sem sessão de cookie. Mantendo sessão via ID local/URL.');
+  }
+
+  // Se não houver ID por nenhum meio, aí sim vai para a tela de login
+  if (!sessao.idFamiliar) {
     fazerLogout();
     return;
   }
@@ -105,13 +123,10 @@ async function onScanSuccess(decodedText) {
   try {
     let idIdoso = decodedText;
 
-    // Trata se o QR Code for JSON
     if (decodedText.startsWith('{')) {
       const parsed = JSON.parse(decodedText);
       idIdoso = parsed.idIdoso || parsed.id;
-    } 
-    // Trata se o QR Code for uma URL contendo parâmetro
-    else if (decodedText.includes('?')) {
+    } else if (decodedText.includes('?')) {
       const urlParams = new URLSearchParams(decodedText.split('?')[1]);
       idIdoso = urlParams.get('idIdoso') || urlParams.get('id') || decodedText;
     }
@@ -123,7 +138,7 @@ async function onScanSuccess(decodedText) {
 
     const { idFamiliar } = getSessaoUsuario();
 
-    exibirStatusScanner(`QR Code lido com sucesso! Estabelecendo vínculo...`, 'info');
+    exibirStatusScanner('QR Code lido com sucesso! Estabelecendo vínculo...', 'info');
 
     const response = await fetch(`${API_VINCULO_URL}/qrcode`, {
       method: 'POST',
@@ -153,10 +168,9 @@ async function onScanSuccess(decodedText) {
 }
 
 function onScanError(errorMessage) {
-  // Ignora o loop silencioso de busca por frames do scanner
+  // Loop silencioso da busca por quadros de câmeras
 }
 
-// Fechamento e destruição da instância da câmera
 async function fecharScannerQrCode(esconderModal = true) {
   if (esconderModal) {
     const modalScanner = document.getElementById('modalScanner');
@@ -200,7 +214,7 @@ function fazerLogout() {
   window.location.href = 'index.html';
 }
 
-// Exposição explícita para manipuladores inline no HTML (onclick)
+// Exposição global para chamadas inline HTML (onclick)
 window.abrirModalVinculo = abrirModalVinculo;
 window.fecharModalVinculo = fecharModalVinculo;
 window.redirecionarVinculo = redirecionarVinculo;

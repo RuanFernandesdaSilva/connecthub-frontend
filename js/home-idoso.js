@@ -4,9 +4,6 @@ const DEFAULT_AVATAR = 'https://via.placeholder.com/100/cbd5e0/ffffff?text=User'
 
 let usuarioLogado = null;
 
-/**
- * Escapa caracteres especiais para prevenir injeção XSS.
- */
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -18,18 +15,14 @@ function escapeHtml(str) {
 }
 
 /**
- * Carrega e valida os dados de sessão salvos localmente no navegador.
- */
-/**
- * Carrega e valida os dados de sessão salvos localmente ou vindo dos parâmetros da URL (Telegram/Web App).
+ * Lê e consolida a sessão local do navegador ou vinda da URL.
  */
 function carregarSessaoLocal() {
-  // 1. CAPTURA PARÂMETROS DA URL (Ex: home-idoso.html?id=15&tipo=IDOSO)
   const urlParams = new URLSearchParams(window.location.search);
   const idUrl = urlParams.get('id');
   const tipoUrl = urlParams.get('tipo');
 
-  // Se veio ID via URL (link do botão do Telegram)
+  // 1. Se veio ID via parâmetros na URL (Botão do Telegram)
   if (idUrl) {
     usuarioLogado = {
       id: parseInt(idUrl, 10),
@@ -37,14 +30,16 @@ function carregarSessaoLocal() {
       tipo: (tipoUrl || 'IDOSO').toUpperCase()
     };
 
-    // Salva no localStorage para manter logado durante a navegação interna
     localStorage.setItem('userId', idUrl);
     localStorage.setItem('userTipo', usuarioLogado.tipo);
     localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
+
+    // Limpa a URL visualmente mantendo os dados no localStorage
+    window.history.replaceState({}, document.title, window.location.pathname);
     return;
   }
 
-  // 2. CASO NÃO TENHA NA URL, BUSCA NO LOCALSTORAGE EXISTENTE
+  // 2. Busca no localStorage caso não esteja na URL
   const usuarioSalvo = localStorage.getItem('usuario');
   if (usuarioSalvo) {
     try {
@@ -69,9 +64,6 @@ function carregarSessaoLocal() {
   }
 }
 
-/**
- * Processa resposta de sessão em formato de texto.
- */
 function parseSessaoTexto(texto) {
   const matchId = texto.match(/(?:ID:\s*|id=)(\d+)/i);
   const matchNome = texto.match(/(?:Nome:\s*|nome=)([^,\n]+)/i);
@@ -85,27 +77,36 @@ function parseSessaoTexto(texto) {
 
 // 1. INICIALIZAÇÃO DA PÁGINA
 async function inicializarHomeIdoso() {
-  try {
-    const response = await fetch(API_AUTH_URL, {
-      method: 'GET',
-      credentials: 'include'
-    });
+  // Carrega primeiros dados locais/URL
+  carregarSessaoLocal();
 
-    if (response.ok) {
-      try {
-        usuarioLogado = await response.json();
-      } catch (e) {
-        const textoSessao = await response.text();
-        usuarioLogado = parseSessaoTexto(textoSessao);
+  // Se não temos dados locais, tenta ver se existe um Cookie de sessão ativo no backend
+  if (!usuarioLogado || !usuarioLogado.id) {
+    try {
+      const response = await fetch(API_AUTH_URL, {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        try {
+          usuarioLogado = await response.json();
+        } catch (e) {
+          const textoSessao = await response.text();
+          usuarioLogado = parseSessaoTexto(textoSessao);
+        }
+
+        if (usuarioLogado && usuarioLogado.id) {
+          localStorage.setItem('userId', usuarioLogado.id);
+          localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
+        }
       }
-    } else {
-      carregarSessaoLocal();
+    } catch (error) {
+      console.warn('Servidor indisponível:', error);
     }
-  } catch (error) {
-    console.warn('Servidor indisponível, recorrendo aos dados locais:', error);
-    carregarSessaoLocal();
   }
 
+  // Se após todas as tentativas o usuário não possuir ID, vai para login
   if (!usuarioLogado || !usuarioLogado.id) {
     redirecionarParaLogin();
     return;
@@ -235,7 +236,7 @@ function redirecionarParaLogin() {
 
 document.addEventListener('DOMContentLoaded', inicializarHomeIdoso);
 
-// Exposição explícita para manipuladores HTML (onclick)
+// Exposição global para chamadas inline HTML (onclick)
 window.irParaQRCode = irParaQRCode;
 window.navegarPara = navegarPara;
 window.mostrarAvisoEmBreve = mostrarAvisoEmBreve;

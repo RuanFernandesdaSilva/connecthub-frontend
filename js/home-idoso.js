@@ -145,37 +145,59 @@ function renderizarPerfil() {
 }
 
 // 3. CARREGAR FAMILIARES VINCULADOS
+// 3. CARREGAR FAMILIARES VINCULADOS
 async function carregarFamiliaresVinculados(idosoId) {
   const container = document.getElementById('listaFamiliaresVinculados');
   if (!container) return;
 
+  const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Familiar&background=cbd5e0&color=fff';
+
   try {
-    const endpointVinculos = API_VINCULO_URL 
-      ? `${API_VINCULO_URL}/idoso/${idosoId}`
-      : `${API_BASE_URL}/api/vinculos/idoso/${idosoId}`;
+    const endpoints = [
+      `${API_BASE_URL}/api/vinculos/idoso/${idosoId}/familiares`,
+      `${API_BASE_URL}/api/vinculos/idoso/${idosoId}`,
+      `${API_BASE_URL}/vinculos/idoso/${idosoId}`
+    ];
 
-    const response = await fetch(endpointVinculos, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include'
-    });
+    let response = null;
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
+        });
+        if (res.ok) {
+          response = res;
+          break;
+        }
+      } catch (err) {
+        console.warn(`Tentativa falhou para endpoint: ${url}`);
+      }
+    }
 
-    if (response.ok) {
-      const familiares = await response.json();
+    if (response && response.ok) {
+      const dados = await response.json();
 
-      if (!Array.isArray(familiares) || familiares.length === 0) {
+      if (!Array.isArray(dados) || dados.length === 0) {
         container.innerHTML = '<p style="color: #777;">Nenhum familiar vinculado ainda.</p>';
         return;
       }
 
-      container.innerHTML = familiares.map(fam => {
-        const nomeFormatado = escapeHtml(fam.nome || 'Familiar');
-        const telFormatado = escapeHtml(fam.telefone || 'Não informado');
-        const fotoUrl = fam.fotoUrl || fam.imagemUrl || DEFAULT_AVATAR;
+      container.innerHTML = dados.map(item => {
+        // Trata os dados flexivelmente se vier DTO direto ou Entidade Vinculo aninhada
+        const fam = item.familiar || item.usuario || item;
+        
+        const nome = fam.nome || item.nomeFamiliar || item.nome || 'Familiar';
+        const telefone = fam.telefone || item.telefoneFamiliar || item.telefone || 'Não informado';
+        const foto = fam.fotoUrl || fam.imagemUrl || item.fotoFamiliarUrl || item.fotoUrl || DEFAULT_AVATAR;
+
+        const nomeFormatado = escapeHtml(nome);
+        const telFormatado = escapeHtml(telefone);
 
         return `
           <div class="card-familiar" style="border: 1px solid #cbd5e0; padding: 10px 15px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <img src="${fotoUrl}" alt="${nomeFormatado}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+            <img src="${foto}" alt="${nomeFormatado}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
             <div>
               <strong style="display: block; font-size: 0.95rem; color: #2d3748;">${nomeFormatado}</strong>
               <small style="color: #64748b;">Tel: ${telFormatado}</small>

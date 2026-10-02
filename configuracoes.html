@@ -1,13 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Configurações - ZELO</title>
-
     <link rel="stylesheet" href="configuracoes.css">
 </head>
 
@@ -16,7 +13,6 @@
     <main class="configuracoes-container">
 
         <h1>Configurações</h1>
-
 
         <!-- PERFIL -->
         <section class="secao">
@@ -27,18 +23,16 @@
             <div class="foto-container">
 
                 <div class="foto-perfil">
-
                     <img
                         id="fotoPerfil"
-                        src="img/foto-padrao.png"
+                        src="https://ui-avatars.com/api/?name=User&background=cbd5e0&color=fff"
                         alt="Foto de perfil"
                     >
-
                 </div>
 
-                <button id="btnAdicionarFoto">
+                <label for="inputFoto" class="btn-foto" id="btnAdicionarFoto">
                     Adicionar foto
-                </button>
+                </label>
 
                 <input
                     type="file"
@@ -49,58 +43,41 @@
 
             </div>
 
-
             <!-- NOME -->
             <div class="campo">
-
                 <label for="nome">Nome</label>
-
                 <input
                     type="text"
                     id="nome"
                     placeholder="Digite seu nome"
                 >
-
             </div>
-
 
             <!-- TIPO DE USUÁRIO -->
             <div class="campo">
-
                 <label>Tipo de usuário</label>
-
                 <p id="tipoUsuario">Familiar</p>
-
             </div>
-
 
             <!-- E-MAIL -->
             <div class="campo">
-
                 <label for="email">E-mail</label>
-
                 <input
                     type="email"
                     id="email"
                     placeholder="Digite seu e-mail"
                 >
-
             </div>
-
 
             <!-- TELEFONE -->
             <div class="campo">
-
                 <label for="telefone">Telefone</label>
-
                 <input
                     type="tel"
                     id="telefone"
                     placeholder="Digite seu telefone"
                 >
-
             </div>
-
 
             <button id="btnSalvar">
                 Salvar alterações
@@ -108,40 +85,30 @@
 
         </section>
 
-
         <!-- SEGURANÇA -->
         <section class="secao">
-
             <h2>Segurança</h2>
-
             <button id="btnAlterarSenha">
                 🔒 Alterar Senha
             </button>
-
         </section>
-
 
         <!-- CONTA -->
         <section class="secao">
-
             <h2>Conta</h2>
-
             <button id="btnSair">
-               Sair da Conta
+                Sair da Conta
             </button>
 
             <button id="btnExcluirConta">
                 Excluir conta
             </button>
-
         </section>
 
     </main>
-
 
     <script type="module" src="js/configuracoes.js"></script>
 
 </body>
 
 </html>
-

@@ -10,27 +10,21 @@ body {
     color: #333;
 }
 
-
 /* CONTAINER PRINCIPAL */
-
 .configuracoes-container {
     width: 90%;
     max-width: 700px;
     margin: 40px auto;
 }
 
-
 /* TÍTULO */
-
 h1 {
     text-align: center;
     margin-bottom: 30px;
     font-size: 32px;
 }
 
-
 /* SEÇÕES */
-
 .secao {
     background-color: white;
     padding: 25px;
@@ -44,9 +38,7 @@ h1 {
     margin-bottom: 20px;
 }
 
-
-/* FOTO */
-
+/* FOTO DE PERFIL CIRCULAR */
 .foto-container {
     display: flex;
     flex-direction: column;
@@ -60,25 +52,46 @@ h1 {
     border-radius: 50%;
     overflow: hidden;
     margin-bottom: 15px;
-    border: 3px solid #ddd;
+    border: 3px solid #007bff;
+    background-color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .foto-perfil img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 50%;
 }
 
+.btn-foto {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color 0.2s ease;
+}
 
-/* CAMPOS */
+.btn-foto:hover {
+    background-color: #e2e8f0;
+}
 
+/* CAMPOS DE FORMULÁRIO */
 .campo {
     margin-bottom: 20px;
 }
 
 .campo label {
     display: block;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     margin-bottom: 8px;
 }
@@ -88,75 +101,56 @@ h1 {
     padding: 14px;
     border: 1px solid #ccc;
     border-radius: 8px;
-    font-size: 17px;
+    font-size: 16px;
 }
 
 .campo input:focus {
     outline: none;
-    border-color: #555;
+    border-color: #007bff;
 }
-
-
-/* TIPO DE USUÁRIO */
 
 #tipoUsuario {
-    font-size: 18px;
+    font-size: 16px;
     padding: 14px;
-    background-color: #f1f1f1;
+    background-color: #f1f5f9;
     border-radius: 8px;
+    color: #475569;
 }
 
-
-/* BOTÕES */
-
+/* BOTÕES DE AÇÃO */
 button {
     width: 100%;
     padding: 15px;
     border: none;
     border-radius: 8px;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     cursor: pointer;
     margin-top: 10px;
-}
-
-#btnAlterarFoto {
-    width: auto;
-    padding: 12px 20px;
+    transition: opacity 0.2s ease;
 }
 
 #btnSalvar {
-    background-color: #333;
+    background-color: #2563eb;
     color: white;
 }
 
-#btnAlterarSenha {
-    background-color: #eee;
-    color: #333;
-}
-
-#btnSair {
-    background-color: #eee;
-    color: #333;
+#btnAlterarSenha, #btnSair {
+    background-color: #e2e8f0;
+    color: #1e293b;
 }
 
 #btnExcluirConta {
-    background-color: #d9534f;
+    background-color: #ef4444;
     color: white;
 }
 
-
-/* EFEITO DOS BOTÕES */
-
 button:hover {
-    opacity: 0.85;
+    opacity: 0.9;
 }
 
-
-/* CELULAR */
-
+/* RESPONSIVIDADE */
 @media (max-width: 600px) {
-
     .configuracoes-container {
         width: 95%;
         margin: 20px auto;
@@ -167,7 +161,6 @@ button:hover {
     }
 
     h1 {
-        font-size: 28px;
+        font-size: 26px;
     }
-
 }

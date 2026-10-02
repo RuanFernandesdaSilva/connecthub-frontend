@@ -1,7 +1,5 @@
 import { API_BASE_URL } from './config.js';
 
-// Cache dos elementos DOM
-const btnAdicionarFoto = document.getElementById("btnAdicionarFoto");
 const inputFoto = document.getElementById("inputFoto");
 const fotoPerfil = document.getElementById("fotoPerfil");
 const btnSalvar = document.getElementById("btnSalvar");
@@ -9,25 +7,22 @@ const btnAlterarSenha = document.getElementById("btnAlterarSenha");
 const btnSair = document.getElementById("btnSair");
 const btnExcluirConta = document.getElementById("btnExcluirConta");
 
-/**
- * Obtém os dados do usuário atual salvos na sessão local.
- */
+const AVATAR_PADRAO = 'https://ui-avatars.com/api/?name=User&background=cbd5e0&color=fff';
+let arquivoFotoSelecionado = null;
+
 function getUsuarioSessao() {
   const usuario = JSON.parse(localStorage.getItem("usuario") || "{}");
   const userId = usuario.id || localStorage.getItem("userId");
   return { usuario, userId };
 }
 
-/**
- * Redireciona para o login em caso de falha de autenticação.
- */
 function redirecionarLogin() {
   localStorage.clear();
   alert("Sessão expirada ou inválida. Faça login novamente.");
   window.location.href = "index.html";
 }
 
-// 1. CARREGAR DADOS DO PERFIL AO ENTRAR
+// 1. CARREGAR DADOS DO PERFIL
 document.addEventListener("DOMContentLoaded", async () => {
   const { usuario, userId } = getUsuarioSessao();
 
@@ -63,33 +58,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       const perfilFormatado = (data.perfil || usuario.tipo || "FAMILIAR").replace("ROLE_", "");
       if (tipoUsuarioElem) tipoUsuarioElem.textContent = perfilFormatado;
       
-      if (data.imagemUrl && fotoPerfil) {
-        fotoPerfil.src = data.imagemUrl;
+      const fotoUrl = data.imagemUrl || data.fotoUrl || usuario.fotoUrl || AVATAR_PADRAO;
+      if (fotoPerfil) {
+        fotoPerfil.src = fotoUrl;
       }
-    } else {
-      console.error("Não foi possível carregar as informações do perfil.");
     }
   } catch (err) {
     console.error("Erro de conexão ao carregar perfil:", err);
   }
 });
 
-// 2. ABRIR SELEÇÃO DE FOTO
-btnAdicionarFoto?.addEventListener("click", () => {
-  inputFoto?.click();
-});
-
-// 3. SELECIONAR E PRÉ-VISUALIZAR FOTO
+// 2. PRÉ-VISUALIZAÇÃO DA FOTO SELECIONADA
 inputFoto?.addEventListener("change", () => {
   const arquivo = inputFoto.files?.[0];
   if (!arquivo) return;
 
-  // Validação simples de tipo
   if (!arquivo.type.startsWith("image/")) {
     alert("Por favor, selecione um arquivo de imagem válido.");
     inputFoto.value = "";
     return;
   }
+
+  arquivoFotoSelecionado = arquivo;
 
   const leitor = new FileReader();
   leitor.onload = (evento) => {
@@ -100,7 +90,7 @@ inputFoto?.addEventListener("change", () => {
   leitor.readAsDataURL(arquivo);
 });
 
-// 4. SALVAR ALTERAÇÕES (NOME, E-MAIL, TELEFONE)
+// 3. SALVAR ALTERAÇÕES (DADOS E FOTO)
 btnSalvar?.addEventListener("click", async () => {
   const { usuario, userId } = getUsuarioSessao();
   if (!userId) return redirecionarLogin();
@@ -115,7 +105,30 @@ btnSalvar?.addEventListener("click", async () => {
   }
 
   try {
-    // Requisições paralelas para otimização de tempo de resposta
+    // 1. Caso haja uma nova foto selecionada, envia para a API
+    if (arquivoFotoSelecionado) {
+      const formData = new FormData();
+      formData.append("foto", arquivoFotoSelecionado);
+
+      try {
+        const resFoto = await fetch(`${API_BASE_URL}/usuarios/${userId}/foto`, {
+          method: "POST",
+          credentials: "include",
+          body: formData
+        });
+
+        if (resFoto.ok) {
+          const resFotoData = await resFoto.json().catch(() => null);
+          if (resFotoData && resFotoData.imagemUrl) {
+            usuario.fotoUrl = resFotoData.imagemUrl;
+          }
+        }
+      } catch (errFoto) {
+        console.warn("Upload de foto via endpoint dedicado não disponível ou falhou:", errFoto);
+      }
+    }
+
+    // 2. Atualização paralela dos dados cadastrais
     const [resNome, resEmail, resTelefone] = await Promise.all([
       fetch(`${API_BASE_URL}/usuarios/${userId}/nome`, {
         method: "PUT",
@@ -137,15 +150,20 @@ btnSalvar?.addEventListener("click", async () => {
       })
     ]);
 
-    if (resNome.ok && resEmail.ok && resTelefone.ok) {
-      // Atualizar cache local
-      const usuarioAtualizado = { ...usuario, nome: novoNome, email: novoEmail };
+    if (resNome.ok || resEmail.ok) {
+      const usuarioAtualizado = { 
+        ...usuario, 
+        nome: novoNome, 
+        email: novoEmail,
+        fotoUrl: fotoPerfil.src 
+      };
+      
       localStorage.setItem("usuario", JSON.stringify(usuarioAtualizado));
       localStorage.setItem("userNome", novoNome);
 
       alert("Perfil atualizado com sucesso!");
     } else {
-      alert("Alguns dados podem não ter sido salvos. Verifique as informações.");
+      alert("Erro ao atualizar o perfil no servidor.");
     }
   } catch (err) {
     console.error("Erro ao salvar alterações do perfil:", err);
@@ -153,7 +171,7 @@ btnSalvar?.addEventListener("click", async () => {
   }
 });
 
-// 5. ALTERAR SENHA
+// 4. ALTERAR SENHA
 btnAlterarSenha?.addEventListener("click", async () => {
   const { userId } = getUsuarioSessao();
   if (!userId) return redirecionarLogin();
@@ -181,7 +199,7 @@ btnAlterarSenha?.addEventListener("click", async () => {
       alert("Senha alterada com sucesso!");
     } else {
       const msg = await res.text();
-      alert(msg || "Erro ao alterar a senha. Verifique a senha atual.");
+      alert(msg || "Erro ao alterar a senha.");
     }
   } catch (err) {
     console.error("Erro ao alterar senha:", err);
@@ -189,13 +207,14 @@ btnAlterarSenha?.addEventListener("click", async () => {
   }
 });
 
-// 6. SAIR DA CONTA
+// 5. SAIR DA CONTA
 btnSair?.addEventListener("click", () => {
   localStorage.clear();
+  sessionStorage.clear();
   window.location.href = "index.html";
 });
 
-// 7. EXCLUIR CONTA
+// 6. EXCLUIR CONTA
 btnExcluirConta?.addEventListener("click", async () => {
   const { userId } = getUsuarioSessao();
   if (!userId) return redirecionarLogin();

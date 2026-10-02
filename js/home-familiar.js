@@ -3,20 +3,18 @@ import { API_BASE_URL, API_VINCULO_URL, API_AUTH_URL } from './config.js';
 let html5QrCodeScanner = null;
 
 /**
- * Função utilitária para encerrar o WebApp do Telegram.
- * Fecha o mini app diretamente na interface do Telegram ou a janela do navegador.
+ * Função utilitária para encerrar a sessão/janela no Telegram WebApp ou Navegador.
  */
 function fecharEFinalizarWebApp() {
-  if (window.Telegram && window.Telegram.WebApp) {
+  if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
     window.Telegram.WebApp.close();
   } else {
-    window.close();
+    window.location.href = 'index.html';
   }
 }
 
 /**
  * Obtém e consolida as informações da sessão do usuário.
- * Limpa o cache se um ID diferente vier na URL (Solução 2).
  */
 function getSessaoUsuario() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -25,31 +23,26 @@ function getSessaoUsuario() {
 
   const idSalvo = localStorage.getItem('userId');
 
-  // SOLUÇÃO 2: Se um novo ID vier pela URL e for diferente do salvo, apaga a sessão antiga imediatamente
   if (idUrl && idSalvo && idUrl !== idSalvo) {
     console.warn('Novo usuário detectado na URL! Limpando cache do usuário anterior...');
     localStorage.clear();
   }
 
-  // 1. Veio via parâmetros de URL (Ex: Link vindo do Telegram)
   if (idUrl) {
     const usuarioUrl = {
       id: parseInt(idUrl, 10),
       tipo: (tipoUrl || 'FAMILIAR').toUpperCase().replace('ROLE_', '')
     };
 
-    // Grava no localStorage do navegador para persistência contínua
     localStorage.setItem('userId', idUrl);
     localStorage.setItem('userTipo', usuarioUrl.tipo);
     localStorage.setItem('usuario', JSON.stringify(usuarioUrl));
 
-    // Limpa a URL visualmente para manter a navegação limpa no navegador
     window.history.replaceState({}, document.title, window.location.pathname);
 
     return { usuario: usuarioUrl, idFamiliar: idUrl, tipo: usuarioUrl.tipo };
   }
 
-  // 2. Fallback para o localStorage
   const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
   const idFamiliar = usuario.id || localStorage.getItem('userId');
   const tipo = (usuario.tipo || localStorage.getItem('userTipo') || '').toUpperCase().replace('ROLE_', '');
@@ -59,15 +52,13 @@ function getSessaoUsuario() {
 
 // 1. INICIALIZAÇÃO DA PÁGINA
 document.addEventListener('DOMContentLoaded', async () => {
-  // Inicializa a SDK do Telegram WebApp se disponível
   if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
-    window.Telegram.WebApp.expand(); // Expande o WebApp para tela cheia se necessário
+    window.Telegram.WebApp.expand();
   }
 
   let sessao = getSessaoUsuario();
 
-  // Tenta validar no servidor se houver cookie, mas NÃO faz logout se falhar e já houver ID local
   try {
     const res = await fetch(API_AUTH_URL, { method: 'GET', credentials: 'include' });
     if (res.ok) {
@@ -83,9 +74,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Servidor offline ou sem sessão de cookie. Mantendo sessão via ID local/URL.');
   }
 
-  // Se não houver ID por nenhum meio, aí sim vai para a tela de login
   if (!sessao.idFamiliar) {
-    fazerLogout();
+    redirecionarParaLogin();
     return;
   }
 
@@ -95,9 +85,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (typeof window.carregarDadosPerfil === 'function') {
     window.carregarDadosPerfil();
   }
+
+  const btnLogout = document.getElementById('btnLogout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', fazerLogout);
+  }
 });
 
-// ADICIONADO: Funções necessárias para carregar dados do perfil e idosos vinculados
 async function carregarDadosPerfil() {
   const { idFamiliar, usuario } = getSessaoUsuario();
 
@@ -210,7 +204,6 @@ function iniciarLeitorQrCode() {
   }
 }
 
-// Processamento do payload do QR Code
 async function onScanSuccess(decodedText) {
   try {
     let idIdoso = decodedText;
@@ -246,7 +239,6 @@ async function onScanSuccess(decodedText) {
       exibirStatusScanner('Vínculo realizado com sucesso!', 'sucesso');
       setTimeout(async () => {
         await fecharScannerQrCode(true);
-        // SOLUÇÃO 1: Fecha a tela do WebApp do Telegram após vincular
         fecharEFinalizarWebApp();
       }, 1500);
     } else {
@@ -293,7 +285,7 @@ function exibirStatusScanner(texto, tipo) {
   }
 }
 
-// 4. NAVEGAÇÃO E UTILITÁRIOS
+// 4. NAVEGAÇÃO E LOGOUT
 function mostrarAvisoEmBreve(modulo) {
   alert(`O módulo de ${modulo} estará disponível em breve!`);
 }
@@ -302,13 +294,35 @@ function navegarPara(url) {
   window.location.href = url;
 }
 
-function fazerLogout() {
+async function fazerLogout() {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1200);
+
+    await fetch(`${API_AUTH_URL}/logout`, {
+      method: 'POST',
+      credentials: 'include',
+      signal: controller.signal
+    }).catch(err => console.warn('Requisição de logout expirou ou falhou:', err));
+
+    clearTimeout(timeoutId);
+  } catch (e) {
+    console.warn('Erro ao encerrar sessão no servidor:', e);
+  } finally {
+    localStorage.clear();
+    sessionStorage.clear();
+    fecharEFinalizarWebApp();
+  }
+}
+
+function redirecionarParaLogin() {
   localStorage.clear();
-  fecharEFinalizarWebApp(); // Fecha o WebApp no logout em vez de apenas navegar
+  sessionStorage.clear();
+  window.location.href = 'index.html';
 }
 
 // Exposição global para chamadas inline HTML (onclick)
-window.carregarDadosPerfil = carregarDadosPerfil; // ADICIONADO: registro global da função
+window.carregarDadosPerfil = carregarDadosPerfil;
 window.abrirModalVinculo = abrirModalVinculo;
 window.fecharModalVinculo = fecharModalVinculo;
 window.redirecionarVinculo = redirecionarVinculo;

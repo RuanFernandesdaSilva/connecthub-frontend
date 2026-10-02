@@ -106,44 +106,60 @@ async function carregarDadosPerfil() {
     elemAvatar.src = usuario.fotoUrl || usuario.imagemUrl;
   }
 
-  carregarIdososVinculados(idFamiliar);
+  await carregarIdososVinculados(idFamiliar);
 }
 
 async function carregarIdososVinculados(idFamiliar) {
   const container = document.getElementById('listaIdososVinculados');
   if (!container) return;
 
+  const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Idoso&background=cbd5e0&color=fff';
+
   try {
-    const endpoint = API_VINCULO_URL 
-      ? `${API_VINCULO_URL}/familiar/${idFamiliar}`
-      : `${API_BASE_URL}/api/vinculos/familiar/${idFamiliar}`;
+    const endpoints = [
+      `${API_BASE_URL}/api/vinculos/familiar/${idFamiliar}/idosos`,
+      `${API_BASE_URL}/api/vinculos/familiar/${idFamiliar}`,
+      `${API_BASE_URL}/vinculos/familiar/${idFamiliar}`
+    ];
 
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include'
-    });
+    let response = null;
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
+        });
+        if (res.ok) {
+          response = res;
+          break;
+        }
+      } catch (err) {
+        console.warn(`Tentativa falhou para endpoint: ${url}`);
+      }
+    }
 
-    if (response.ok) {
-      const idosos = await response.json();
+    if (response && response.ok) {
+      const dados = await response.json();
 
-      if (!Array.isArray(idosos) || idosos.length === 0) {
+      if (!Array.isArray(dados) || dados.length === 0) {
         container.innerHTML = '<p style="color: #666;">Nenhum idoso vinculado ainda.</p>';
         return;
       }
 
-      const defaultAvatar = 'https://via.placeholder.com/100/cbd5e0/ffffff?text=User';
+      container.innerHTML = dados.map(item => {
+        const idoso = item.idoso || item.usuario || item;
 
-      container.innerHTML = idosos.map(idoso => {
-        const nome = idoso.nome || 'Idoso';
-        const foto = idoso.fotoUrl || idoso.imagemUrl || defaultAvatar;
+        const nome = idoso.nome || item.nomeIdoso || item.nome || 'Idoso';
+        const idExibicao = idoso.id || item.idIdoso || item.id || '--';
+        const foto = idoso.fotoUrl || idoso.imagemUrl || item.fotoIdosoUrl || item.fotoUrl || DEFAULT_AVATAR;
 
         return `
           <div class="card-idoso" style="border: 1px solid #cbd5e0; padding: 10px 15px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; gap: 10px;">
             <img src="${foto}" alt="${nome}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
             <div>
               <strong style="display: block; font-size: 0.95rem; color: #2d3748;">${nome}</strong>
-              <small style="color: #64748b;">ID: ${idoso.id}</small>
+              <small style="color: #64748b;">ID: ${idExibicao}</small>
             </div>
           </div>
         `;
@@ -222,7 +238,7 @@ async function onScanSuccess(decodedText) {
     }
     // 3. Caso o QR Code contenha apenas números ou texto como "ID: 8"
     else {
-      const match = rawText.match(/\d+/); // Extrai os dígitos numéricos
+      const match = rawText.match(/\d+/);
       if (match) {
         idIdoso = match[0];
       }
@@ -249,10 +265,15 @@ async function onScanSuccess(decodedText) {
 
     if (response.ok) {
       exibirStatusScanner('Vínculo realizado com sucesso!', 'sucesso');
+
+      // Atualização imediata do grid de idosos na DOM
+      if (idFamiliar) {
+        await carregarIdososVinculados(idFamiliar);
+      }
+
       setTimeout(async () => {
         await fecharScannerQrCode(true);
-        window.location.reload();
-      }, 1500);
+      }, 1200);
     } else {
       const erroText = await response.text();
       exibirStatusScanner(`Erro ao vincular: ${erroText || 'Solicitação recusada pelo servidor.'}`, 'erro');
@@ -335,6 +356,7 @@ function redirecionarParaLogin() {
 
 // Exposição global para chamadas inline HTML (onclick)
 window.carregarDadosPerfil = carregarDadosPerfil;
+window.carregarIdososVinculados = carregarIdososVinculados;
 window.abrirModalVinculo = abrirModalVinculo;
 window.fecharModalVinculo = fecharModalVinculo;
 window.redirecionarVinculo = redirecionarVinculo;

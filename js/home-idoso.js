@@ -1,6 +1,6 @@
 import { API_BASE_URL, API_AUTH_URL, API_VINCULO_URL } from './config.js';
 
-const DEFAULT_AVATAR = 'https://via.placeholder.com/100/cbd5e0/ffffff?text=User';
+const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Idoso&background=cbd5e0&color=fff';
 
 let usuarioLogado = null;
 
@@ -130,7 +130,7 @@ async function inicializarHomeIdoso() {
   }
 
   renderizarPerfil();
-  carregarFamiliaresVinculados(usuarioLogado.id);
+  await carregarFamiliaresVinculados(usuarioLogado.id);
 }
 
 // 2. RENDERIZAÇÃO DO PERFIL DO IDOSO
@@ -145,12 +145,11 @@ function renderizarPerfil() {
 }
 
 // 3. CARREGAR FAMILIARES VINCULADOS
-// 3. CARREGAR FAMILIARES VINCULADOS
 async function carregarFamiliaresVinculados(idosoId) {
   const container = document.getElementById('listaFamiliaresVinculados');
   if (!container) return;
 
-  const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Familiar&background=cbd5e0&color=fff';
+  const AVATAR_PADRAO = 'https://ui-avatars.com/api/?name=Familiar&background=cbd5e0&color=fff';
 
   try {
     const endpoints = [
@@ -185,12 +184,11 @@ async function carregarFamiliaresVinculados(idosoId) {
       }
 
       container.innerHTML = dados.map(item => {
-        // Trata os dados flexivelmente se vier DTO direto ou Entidade Vinculo aninhada
         const fam = item.familiar || item.usuario || item;
         
         const nome = fam.nome || item.nomeFamiliar || item.nome || 'Familiar';
         const telefone = fam.telefone || item.telefoneFamiliar || item.telefone || 'Não informado';
-        const foto = fam.fotoUrl || fam.imagemUrl || item.fotoFamiliarUrl || item.fotoUrl || DEFAULT_AVATAR;
+        const foto = fam.fotoUrl || fam.imagemUrl || item.fotoFamiliarUrl || item.fotoUrl || AVATAR_PADRAO;
 
         const nomeFormatado = escapeHtml(nome);
         const telFormatado = escapeHtml(telefone);
@@ -281,8 +279,9 @@ function redirecionarParaLogin() {
   window.location.href = 'index.html';
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  inicializarHomeIdoso();
+// DOMContentLoaded garantindo recarregamento e event listeners
+document.addEventListener('DOMContentLoaded', async () => {
+  await inicializarHomeIdoso();
 
   const btnLogout = document.getElementById('btnLogout');
   if (btnLogout) {
@@ -291,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Exposição global para chamadas inline HTML (onclick)
+window.carregarFamiliaresVinculados = carregarFamiliaresVinculados;
 window.irParaQRCode = irParaQRCode;
 window.navegarPara = navegarPara;
 window.mostrarAvisoEmBreve = mostrarAvisoEmBreve;

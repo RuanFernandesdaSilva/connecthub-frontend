@@ -1,11 +1,39 @@
 /* ==========================================================================
+   BOTÃO DE LOGOUT (APENAS ÍCONE)
+   ========================================================================== */
+.btn-logout {
+  background: transparent;
+  border: 1px solid var(--danger-color, #e53e3e);
+  color: var(--danger-color, #e53e3e);
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  flex-shrink: 0;
+}
+
+.btn-logout:hover {
+  background: var(--danger-color, #e53e3e);
+  color: #ffffff;
+}
+
+.logout-icon {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  display: block;
+}
+/* ==========================================================================
    UTILITÁRIOS ESSENCIAIS DE TELA E MODAL (CORREÇÃO DE OCULTAÇÃO)
    ========================================================================== */
 .hidden {
   display: none !important;
 }
-/* FORÇA OCULTAÇÃO DE MÓDULOS E MODAIS FECHADOS */
-
 
 /* ==========================================================================
    CABEÇALHO DO PERFIL
@@ -47,21 +75,6 @@
   font-size: 0.8rem;
   font-weight: 600;
   margin-top: 5px;
-}
-
-.btn-logout {
-  background: transparent;
-  border: 1px solid var(--danger-color, #e53e3e);
-  color: var(--danger-color, #e53e3e);
-  padding: 8px 16px;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.btn-logout:hover {
-  background: var(--danger-color, #e53e3e);
-  color: #ffffff;
 }
 
 /* ==========================================================================

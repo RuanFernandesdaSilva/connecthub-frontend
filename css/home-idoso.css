@@ -38,16 +38,33 @@
   margin-top: 5px;
 }
 
+/* Estilização do Botão de Logout apenas com Ícone */
 .btn-logout {
   background: transparent;
-  border: 1px solid var(--danger-color);
-  color: var(--danger-color);
-  padding: 8px 16px;
+  border: 1px solid var(--danger-color, #e53e3e);
+  color: var(--danger-color, #e53e3e);
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%; /* Torna o botão circular */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  flex-shrink: 0;
 }
 
 .btn-logout:hover {
-  background: var(--danger-color);
-  color: #fff;
+  background: var(--danger-color, #e53e3e);
+  color: #ffffff;
+}
+
+.logout-icon {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  display: block;
 }
 
 /* Dashboard Options Grid */

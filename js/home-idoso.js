@@ -15,19 +15,18 @@ function escapeHtml(str) {
 }
 
 /**
- * Função utilitária para encerrar a janela do WebApp no Telegram (Solução 1).
+ * Função utilitária para encerrar a sessão/janela no Telegram WebApp ou Navegador.
  */
 function fecharEFinalizarWebApp() {
-  if (window.Telegram && window.Telegram.WebApp) {
+  if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
     window.Telegram.WebApp.close();
   } else {
-    window.close();
+    window.location.href = 'index.html';
   }
 }
 
 /**
  * Lê e consolida a sessão local do navegador ou vinda da URL.
- * Limpa o cache se um ID diferente vier na URL (Solução 2).
  */
 function carregarSessaoLocal() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -36,13 +35,11 @@ function carregarSessaoLocal() {
 
   const idSalvo = localStorage.getItem('userId');
 
-  // SOLUÇÃO 2: Se vier um novo ID pela URL e for diferente do salvo, apaga os dados antigos imediatamente
   if (idUrl && idSalvo && idUrl !== idSalvo) {
     console.warn('Novo usuário detectado na URL! Limpando cache do usuário anterior...');
     localStorage.clear();
   }
 
-  // 1. Se veio ID via parâmetros na URL (Botão do Telegram)
   if (idUrl) {
     usuarioLogado = {
       id: parseInt(idUrl, 10),
@@ -54,12 +51,10 @@ function carregarSessaoLocal() {
     localStorage.setItem('userTipo', usuarioLogado.tipo);
     localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
 
-    // Limpa a URL visualmente mantendo os dados no localStorage
     window.history.replaceState({}, document.title, window.location.pathname);
     return;
   }
 
-  // 2. Busca no localStorage caso não esteja na URL
   const usuarioSalvo = localStorage.getItem('usuario');
   if (usuarioSalvo) {
     try {
@@ -97,16 +92,13 @@ function parseSessaoTexto(texto) {
 
 // 1. INICIALIZAÇÃO DA PÁGINA
 async function inicializarHomeIdoso() {
-  // Inicializa a SDK do Telegram WebApp se disponível
   if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
     window.Telegram.WebApp.expand();
   }
 
-  // Carrega primeiros dados locais/URL
   carregarSessaoLocal();
 
-  // Se não temos dados locais, tenta ver se existe um Cookie de sessão ativo no backend
   if (!usuarioLogado || !usuarioLogado.id) {
     try {
       const response = await fetch(API_AUTH_URL, {
@@ -132,7 +124,6 @@ async function inicializarHomeIdoso() {
     }
   }
 
-  // Se após todas as tentativas o usuário não possuir ID, vai para login
   if (!usuarioLogado || !usuarioLogado.id) {
     redirecionarParaLogin();
     return;
@@ -243,24 +234,39 @@ function mostrarAvisoEmBreve(modulo) {
 
 async function fazerLogout() {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1200);
+
     await fetch(`${API_AUTH_URL}/logout`, {
       method: 'POST',
-      credentials: 'include'
-    });
+      credentials: 'include',
+      signal: controller.signal
+    }).catch(err => console.warn('Requisição de logout expirou ou falhou:', err));
+
+    clearTimeout(timeoutId);
   } catch (e) {
     console.warn('Erro ao encerrar sessão no servidor:', e);
   } finally {
     localStorage.clear();
-    fecharEFinalizarWebApp(); // Fecha o aplicativo WebApp ao sair
+    sessionStorage.clear();
+    fecharEFinalizarWebApp();
   }
 }
 
 function redirecionarParaLogin() {
   localStorage.clear();
+  sessionStorage.clear();
   window.location.href = 'index.html';
 }
 
-document.addEventListener('DOMContentLoaded', inicializarHomeIdoso);
+document.addEventListener('DOMContentLoaded', () => {
+  inicializarHomeIdoso();
+
+  const btnLogout = document.getElementById('btnLogout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', fazerLogout);
+  }
+});
 
 // Exposição global para chamadas inline HTML (onclick)
 window.irParaQRCode = irParaQRCode;

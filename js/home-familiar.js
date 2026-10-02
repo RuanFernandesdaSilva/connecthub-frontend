@@ -206,19 +206,31 @@ function iniciarLeitorQrCode() {
 
 async function onScanSuccess(decodedText) {
   try {
-    let idIdoso = decodedText;
+    let idIdoso = null;
+    const rawText = decodedText.trim();
 
-    if (decodedText.startsWith('{')) {
-      const parsed = JSON.parse(decodedText);
-      idIdoso = parsed.idIdoso || parsed.id;
-    } else if (decodedText.includes('?')) {
-      const urlParams = new URLSearchParams(decodedText.split('?')[1]);
-      idIdoso = urlParams.get('idIdoso') || urlParams.get('id') || decodedText;
+    // 1. Caso o QR Code seja um JSON
+    if (rawText.startsWith('{') && rawText.endsWith('}')) {
+      const parsed = JSON.parse(rawText);
+      idIdoso = parsed.idIdoso || parsed.idosoId || parsed.id || parsed.userId;
+    } 
+    // 2. Caso o QR Code seja uma URL ou parâmetro (ex: qrcode.html?id=8 ou ?idIdoso=8)
+    else if (rawText.includes('?')) {
+      const queryString = rawText.split('?')[1];
+      const urlParams = new URLSearchParams(queryString);
+      idIdoso = urlParams.get('id') || urlParams.get('idIdoso') || urlParams.get('idosoId');
+    }
+    // 3. Caso o QR Code contenha apenas números ou texto como "ID: 8"
+    else {
+      const match = rawText.match(/\d+/); // Extrai os dígitos numéricos
+      if (match) {
+        idIdoso = match[0];
+      }
     }
 
     const idIdosoParsed = parseInt(idIdoso, 10);
-    if (isNaN(idIdosoParsed)) {
-      throw new Error('ID do idoso inválido');
+    if (!idIdoso || isNaN(idIdosoParsed)) {
+      throw new Error('Não foi possível identificar o ID numérico do idoso no QR Code.');
     }
 
     const { idFamiliar } = getSessaoUsuario();
@@ -239,7 +251,7 @@ async function onScanSuccess(decodedText) {
       exibirStatusScanner('Vínculo realizado com sucesso!', 'sucesso');
       setTimeout(async () => {
         await fecharScannerQrCode(true);
-        fecharEFinalizarWebApp();
+        window.location.reload();
       }, 1500);
     } else {
       const erroText = await response.text();

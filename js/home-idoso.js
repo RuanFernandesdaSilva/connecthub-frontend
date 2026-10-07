@@ -14,9 +14,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-/**
- * Função utilitária para encerrar a sessão/janela no Telegram WebApp ou Navegador.
- */
 function fecharEFinalizarWebApp() {
   if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
     window.Telegram.WebApp.close();
@@ -25,9 +22,6 @@ function fecharEFinalizarWebApp() {
   }
 }
 
-/**
- * Lê e consolida a sessão local do navegador ou vinda da URL.
- */
 function carregarSessaoLocal() {
   const urlParams = new URLSearchParams(window.location.search);
   const idUrl = urlParams.get('id');
@@ -36,15 +30,15 @@ function carregarSessaoLocal() {
   const idSalvo = localStorage.getItem('userId');
 
   if (idUrl && idSalvo && idUrl !== idSalvo) {
-    console.warn('Novo usuário detectado na URL! Limpando cache do usuário anterior...');
-    localStorage.clear();
+    console.warn('Novo usuário detectado na URL! Limpando cache anterior...');
+    limparSessaoManterFotos();
   }
 
   if (idUrl) {
     usuarioLogado = {
       id: parseInt(idUrl, 10),
       nome: localStorage.getItem('userNome') || 'Idoso',
-      fotoUrl: localStorage.getItem('userFoto') || null,
+      fotoUrl: localStorage.getItem(`user_foto_${idUrl}`) || localStorage.getItem('userFoto') || null,
       tipo: (tipoUrl || 'IDOSO').toUpperCase()
     };
 
@@ -68,7 +62,7 @@ function carregarSessaoLocal() {
   if (!usuarioLogado || !usuarioLogado.id) {
     const idSolf = localStorage.getItem('userId');
     const nomeSolf = localStorage.getItem('userNome');
-    const fotoSolf = localStorage.getItem('userFoto');
+    const fotoSolf = localStorage.getItem(`user_foto_${idSolf}`) || localStorage.getItem('userFoto');
     const tipoSolf = localStorage.getItem('userTipo');
 
     if (idSolf) {
@@ -93,7 +87,6 @@ function parseSessaoTexto(texto) {
   };
 }
 
-// 1. INICIALIZAÇÃO DA PÁGINA
 async function inicializarHomeIdoso() {
   if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
@@ -102,7 +95,6 @@ async function inicializarHomeIdoso() {
 
   carregarSessaoLocal();
 
-  // Caso precise validar autenticação no servidor
   if (!usuarioLogado || !usuarioLogado.id) {
     try {
       const response = await fetch(API_AUTH_URL, {
@@ -114,9 +106,10 @@ async function inicializarHomeIdoso() {
         try {
           const dadosApi = await response.json();
           if (dadosApi && dadosApi.id) {
+            const fotoSalvaLocal = localStorage.getItem(`user_foto_${dadosApi.id}`);
             usuarioLogado = {
               ...dadosApi,
-              fotoUrl: dadosApi.fotoUrl || dadosApi.imagemUrl || localStorage.getItem('userFoto')
+              fotoUrl: fotoSalvaLocal || dadosApi.fotoUrl || dadosApi.imagemUrl || localStorage.getItem('userFoto')
             };
           }
         } catch (e) {
@@ -129,6 +122,7 @@ async function inicializarHomeIdoso() {
           localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
           if (usuarioLogado.fotoUrl) {
             localStorage.setItem('userFoto', usuarioLogado.fotoUrl);
+            localStorage.setItem(`user_foto_${usuarioLogado.id}`, usuarioLogado.fotoUrl);
           }
         }
       }
@@ -144,7 +138,6 @@ async function inicializarHomeIdoso() {
 
   renderizarPerfil();
 
-  // Busca foto atualizada do banco de dados para recuperar foto pós-login
   if (usuarioLogado && usuarioLogado.id) {
     try {
       const res = await fetch(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
@@ -155,16 +148,16 @@ async function inicializarHomeIdoso() {
 
       if (res.ok) {
         const dadosPerfil = await res.json();
-        const fotoAtualizada = dadosPerfil.fotoUrl || dadosPerfil.imagemUrl || dadosPerfil.foto;
+        const fotoAtualizada = dadosPerfil.fotoUrl || dadosPerfil.imagemUrl || dadosPerfil.foto || localStorage.getItem(`user_foto_${usuarioLogado.id}`);
 
         if (fotoAtualizada && fotoAtualizada !== DEFAULT_AVATAR) {
           usuarioLogado.fotoUrl = fotoAtualizada;
           usuarioLogado.imagemUrl = fotoAtualizada;
-          
           if (dadosPerfil.nome) usuarioLogado.nome = dadosPerfil.nome;
 
           localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
           localStorage.setItem('userFoto', fotoAtualizada);
+          localStorage.setItem(`user_foto_${usuarioLogado.id}`, fotoAtualizada);
           if (dadosPerfil.nome) localStorage.setItem('userNome', dadosPerfil.nome);
 
           renderizarPerfil();
@@ -178,14 +171,16 @@ async function inicializarHomeIdoso() {
   await carregarFamiliaresVinculados(usuarioLogado.id);
 }
 
-// 2. RENDERIZAÇÃO DO PERFIL DO IDOSO
 function renderizarPerfil() {
   if (!usuarioLogado) return;
 
   const nomeElem = document.getElementById('userName');
   const avatarElem = document.getElementById('userAvatar');
 
-  const foto = usuarioLogado.fotoUrl || 
+  const fotoPersistida = usuarioLogado.id ? localStorage.getItem(`user_foto_${usuarioLogado.id}`) : null;
+
+  const foto = fotoPersistida || 
+               usuarioLogado.fotoUrl || 
                usuarioLogado.imagemUrl || 
                localStorage.getItem('userFoto') || 
                DEFAULT_AVATAR;
@@ -198,7 +193,6 @@ function renderizarPerfil() {
   if (avatarElem) avatarElem.src = foto;
 }
 
-// 3. CARREGAR FAMILIARES VINCULADOS
 async function carregarFamiliaresVinculados(idosoId) {
   const container = document.getElementById('listaFamiliaresVinculados');
   if (!container) return;
@@ -266,7 +260,6 @@ async function carregarFamiliaresVinculados(idosoId) {
   }
 }
 
-// 4. ROTAS E NAVEGAÇÃO
 function irParaQRCode() {
   let idDestino = null;
 
@@ -321,19 +314,33 @@ async function fazerLogout() {
   } catch (e) {
     console.warn('Erro ao encerrar sessão no servidor:', e);
   } finally {
-    localStorage.clear();
-    sessionStorage.clear();
+    limparSessaoManterFotos();
     fecharEFinalizarWebApp();
   }
 }
 
 function redirecionarParaLogin() {
-  localStorage.clear();
-  sessionStorage.clear();
+  limparSessaoManterFotos();
   window.location.href = 'index.html';
 }
 
-// DOMContentLoaded garantindo recarregamento e event listeners
+function limparSessaoManterFotos() {
+  const chavesFotos = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("user_foto_")) {
+      chavesFotos[key] = localStorage.getItem(key);
+    }
+  }
+  
+  localStorage.clear();
+  sessionStorage.clear();
+
+  Object.keys(chavesFotos).forEach(k => {
+    localStorage.setItem(k, chavesFotos[k]);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await inicializarHomeIdoso();
 
@@ -343,7 +350,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Exposição global para chamadas inline HTML (onclick)
 window.carregarFamiliaresVinculados = carregarFamiliaresVinculados;
 window.irParaQRCode = irParaQRCode;
 window.navegarPara = navegarPara;

@@ -10,6 +10,7 @@ const btnExcluirConta = document.getElementById("btnExcluirConta");
 const AVATAR_PADRAO = 'https://ui-avatars.com/api/?name=User&background=cbd5e0&color=fff';
 let arquivoFotoSelecionado = null;
 let fotoBase64Comprimida = null;
+let usuarioOriginal = null;
 
 function getUsuarioSessao() {
   const usuarioRaw = localStorage.getItem("usuario");
@@ -106,6 +107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (res.ok) {
       const data = await res.json();
+      usuarioOriginal = data; // Guarda dados originais vindos do banco
 
       if (nomeInput && data.nome) nomeInput.value = data.nome;
       if (emailInput && data.email) emailInput.value = data.email;
@@ -143,13 +145,13 @@ inputFoto?.addEventListener("change", async () => {
   }
 });
 
-// 3. SALVAR ALTERAÇÕES (USANDO AtualizarFotoDto NO SPRING BOOT)
+// 3. SALVAR ALTERAÇÕES (EXECUTADO EM SEQUÊNCIA PARA EVITAR DADOS CORROMPIDOS)
 btnSalvar?.addEventListener("click", async () => {
   const { usuario, userId } = getUsuarioSessao();
   if (!userId) return redirecionarLogin();
 
   const novoNome = document.getElementById("nome")?.value.trim();
-  const novoEmail = document.getElementById("email")?.value.trim();
+  const novoEmail = document.getElementById("email")?.value.trim().toLowerCase();
   const novoTelefone = document.getElementById("telefone")?.value.trim();
 
   if (!novoNome || !novoEmail) {
@@ -160,40 +162,47 @@ btnSalvar?.addEventListener("click", async () => {
   const novaFotoUrl = fotoBase64Comprimida || fotoPerfil?.src || usuario.fotoUrl || AVATAR_PADRAO;
 
   try {
-    const requisicoes = [
-      fetch(`${API_BASE_URL}/usuarios/${userId}/nome`, {
+    // Atualização sequencial ordenada (evita concorrência no JPA)
+    
+    // a) Atualiza Foto
+    if (fotoBase64Comprimida) {
+      await fetch(`${API_BASE_URL}/usuarios/${userId}/foto`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ imagemUrl: novaFotoUrl })
+      });
+    }
+
+    // b) Atualiza Nome (apenas se alterado)
+    if (!usuarioOriginal || usuarioOriginal.nome !== novoNome) {
+      await fetch(`${API_BASE_URL}/usuarios/${userId}/nome`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ nome: novoNome })
-      }),
-      fetch(`${API_BASE_URL}/usuarios/${userId}/email`, {
+      });
+    }
+
+    // c) Atualiza E-mail (apenas se alterado)
+    if (!usuarioOriginal || usuarioOriginal.email !== novoEmail) {
+      await fetch(`${API_BASE_URL}/usuarios/${userId}/email`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ email: novoEmail })
-      }),
-      fetch(`${API_BASE_URL}/usuarios/${userId}/telefone`, {
+      });
+    }
+
+    // d) Atualiza Telefone (apenas se alterado)
+    if (!usuarioOriginal || usuarioOriginal.telefone !== novoTelefone) {
+      await fetch(`${API_BASE_URL}/usuarios/${userId}/telefone`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ telefone: novoTelefone })
-      })
-    ];
-
-    // Se houve uma foto selecionada/modificada, envia usando a estrutura exata do AtualizarFotoDto
-    if (fotoBase64Comprimida) {
-      requisicoes.push(
-        fetch(`${API_BASE_URL}/usuarios/${userId}/foto`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ imagemUrl: novaFotoUrl })
-        })
-      );
+      });
     }
-
-    await Promise.allSettled(requisicoes);
 
     const usuarioAtualizado = {
       ...usuario,
@@ -224,6 +233,7 @@ btnSalvar?.addEventListener("click", async () => {
   }
 });
 
+// 4. ALTERAR SENHA
 btnAlterarSenha?.addEventListener("click", async () => {
   const { userId } = getUsuarioSessao();
   if (!userId) return redirecionarLogin();
@@ -259,11 +269,13 @@ btnAlterarSenha?.addEventListener("click", async () => {
   }
 });
 
+// 5. SAIR DA CONTA
 btnSair?.addEventListener("click", () => {
   limparSessaoManterFotos();
   window.location.href = "index.html";
 });
 
+// 6. EXCLUIR CONTA
 btnExcluirConta?.addEventListener("click", async () => {
   const { userId } = getUsuarioSessao();
   if (!userId) return redirecionarLogin();

@@ -44,6 +44,7 @@ function carregarSessaoLocal() {
     usuarioLogado = {
       id: parseInt(idUrl, 10),
       nome: localStorage.getItem('userNome') || 'Idoso',
+      fotoUrl: localStorage.getItem('userFoto') || null,
       tipo: (tipoUrl || 'IDOSO').toUpperCase()
     };
 
@@ -67,12 +68,14 @@ function carregarSessaoLocal() {
   if (!usuarioLogado || !usuarioLogado.id) {
     const idSolf = localStorage.getItem('userId');
     const nomeSolf = localStorage.getItem('userNome');
+    const fotoSolf = localStorage.getItem('userFoto');
     const tipoSolf = localStorage.getItem('userTipo');
 
     if (idSolf) {
       usuarioLogado = {
         id: parseInt(idSolf, 10),
         nome: nomeSolf || 'Idoso',
+        fotoUrl: fotoSolf || null,
         tipo: tipoSolf || 'IDOSO'
       };
     }
@@ -99,6 +102,7 @@ async function inicializarHomeIdoso() {
 
   carregarSessaoLocal();
 
+  // Caso precise validar autenticação no servidor
   if (!usuarioLogado || !usuarioLogado.id) {
     try {
       const response = await fetch(API_AUTH_URL, {
@@ -108,7 +112,13 @@ async function inicializarHomeIdoso() {
 
       if (response.ok) {
         try {
-          usuarioLogado = await response.json();
+          const dadosApi = await response.json();
+          if (dadosApi && dadosApi.id) {
+            usuarioLogado = {
+              ...dadosApi,
+              fotoUrl: dadosApi.fotoUrl || dadosApi.imagemUrl || localStorage.getItem('userFoto')
+            };
+          }
         } catch (e) {
           const textoSessao = await response.text();
           usuarioLogado = parseSessaoTexto(textoSessao);
@@ -117,6 +127,9 @@ async function inicializarHomeIdoso() {
         if (usuarioLogado && usuarioLogado.id) {
           localStorage.setItem('userId', usuarioLogado.id);
           localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
+          if (usuarioLogado.fotoUrl) {
+            localStorage.setItem('userFoto', usuarioLogado.fotoUrl);
+          }
         }
       }
     } catch (error) {
@@ -130,6 +143,38 @@ async function inicializarHomeIdoso() {
   }
 
   renderizarPerfil();
+
+  // Busca foto atualizada do banco de dados para recuperar foto pós-login
+  if (usuarioLogado && usuarioLogado.id) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        const dadosPerfil = await res.json();
+        const fotoAtualizada = dadosPerfil.fotoUrl || dadosPerfil.imagemUrl || dadosPerfil.foto;
+
+        if (fotoAtualizada && fotoAtualizada !== DEFAULT_AVATAR) {
+          usuarioLogado.fotoUrl = fotoAtualizada;
+          usuarioLogado.imagemUrl = fotoAtualizada;
+          
+          if (dadosPerfil.nome) usuarioLogado.nome = dadosPerfil.nome;
+
+          localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
+          localStorage.setItem('userFoto', fotoAtualizada);
+          if (dadosPerfil.nome) localStorage.setItem('userNome', dadosPerfil.nome);
+
+          renderizarPerfil();
+        }
+      }
+    } catch (err) {
+      console.warn('Não foi possível atualizar dados do perfil via API:', err);
+    }
+  }
+
   await carregarFamiliaresVinculados(usuarioLogado.id);
 }
 
@@ -140,8 +185,17 @@ function renderizarPerfil() {
   const nomeElem = document.getElementById('userName');
   const avatarElem = document.getElementById('userAvatar');
 
-  if (nomeElem) nomeElem.textContent = usuarioLogado.nome || 'Idoso';
-  if (avatarElem) avatarElem.src = usuarioLogado.fotoUrl || usuarioLogado.imagemUrl || DEFAULT_AVATAR;
+  const foto = usuarioLogado.fotoUrl || 
+               usuarioLogado.imagemUrl || 
+               localStorage.getItem('userFoto') || 
+               DEFAULT_AVATAR;
+
+  const nome = usuarioLogado.nome || 
+               localStorage.getItem('userNome') || 
+               'Idoso';
+
+  if (nomeElem) nomeElem.textContent = nome;
+  if (avatarElem) avatarElem.src = foto;
 }
 
 // 3. CARREGAR FAMILIARES VINCULADOS

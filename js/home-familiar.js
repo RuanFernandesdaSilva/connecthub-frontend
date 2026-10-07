@@ -101,7 +101,13 @@ async function inicializarHomeFamiliar() {
 
       if (response.ok) {
         try {
-          usuarioLogado = await response.json();
+          const dadosApi = await response.json();
+          if (dadosApi && dadosApi.id) {
+            usuarioLogado = {
+              ...dadosApi,
+              fotoUrl: dadosApi.fotoUrl || dadosApi.imagemUrl || localStorage.getItem('userFoto')
+            };
+          }
         } catch (e) {
           console.warn('Falha ao converter JSON da sessão');
         }
@@ -109,6 +115,9 @@ async function inicializarHomeFamiliar() {
         if (usuarioLogado && usuarioLogado.id) {
           localStorage.setItem('userId', usuarioLogado.id);
           localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
+          if (usuarioLogado.fotoUrl) {
+            localStorage.setItem('userFoto', usuarioLogado.fotoUrl);
+          }
         }
       }
     } catch (error) {
@@ -124,7 +133,40 @@ async function inicializarHomeFamiliar() {
   fecharModalVinculo();
   fecharScannerQrCode(true);
 
+  // Renderização inicial através do cache local
   renderizarPerfil();
+
+  // Consulta o Spring Boot para recuperar a foto do banco caso o localStorage tenha sido limpo no logout
+  if (usuarioLogado && usuarioLogado.id) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        const dadosPerfil = await res.json();
+        const fotoAtualizada = dadosPerfil.fotoUrl || dadosPerfil.imagemUrl || dadosPerfil.foto;
+
+        if (fotoAtualizada && fotoAtualizada !== DEFAULT_AVATAR) {
+          usuarioLogado.fotoUrl = fotoAtualizada;
+          usuarioLogado.imagemUrl = fotoAtualizada;
+          if (dadosPerfil.nome) usuarioLogado.nome = dadosPerfil.nome;
+
+          localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
+          localStorage.setItem('userFoto', fotoAtualizada);
+          if (dadosPerfil.nome) localStorage.setItem('userNome', dadosPerfil.nome);
+
+          // Atualiza o DOM imediatamente após recuperar do servidor
+          renderizarPerfil();
+        }
+      }
+    } catch (err) {
+      console.warn('Não foi possível sincronizar foto via API:', err);
+    }
+  }
+
   await carregarIdososVinculados(usuarioLogado.id);
 }
 

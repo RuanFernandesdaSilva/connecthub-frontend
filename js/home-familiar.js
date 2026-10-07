@@ -1,9 +1,22 @@
 import { API_BASE_URL, API_VINCULO_URL, API_AUTH_URL } from './config.js';
 
+const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Familiar&background=cbd5e0&color=fff';
+
 let html5QrCodeScanner = null;
+let usuarioLogado = null;
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 /**
- * Função utilitária para encerrar a sessão/janela no Telegram WebApp ou Navegador.
+ * Encerra a sessão/janela no Telegram WebApp ou Navegador.
  */
 function fecharEFinalizarWebApp() {
   if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
@@ -14,9 +27,9 @@ function fecharEFinalizarWebApp() {
 }
 
 /**
- * Obtém e consolida as informações da sessão do usuário.
+ * Lê e consolida a sessão local (idêntico ao mecanismo do idoso)
  */
-function getSessaoUsuario() {
+function carregarSessaoLocal() {
   const urlParams = new URLSearchParams(window.location.search);
   const idUrl = urlParams.get('id');
   const tipoUrl = urlParams.get('tipo');
@@ -24,57 +37,86 @@ function getSessaoUsuario() {
   const idSalvo = localStorage.getItem('userId');
 
   if (idUrl && idSalvo && idUrl !== idSalvo) {
-    console.warn('Novo usuário detectado na URL! Limpando cache do usuário anterior...');
+    console.warn('Novo usuário detectado na URL! Limpando cache anterior...');
     localStorage.clear();
   }
 
   if (idUrl) {
-    const usuarioUrl = {
+    usuarioLogado = {
       id: parseInt(idUrl, 10),
+      nome: localStorage.getItem('userNome') || 'Familiar',
+      fotoUrl: localStorage.getItem('userFoto') || null,
       tipo: (tipoUrl || 'FAMILIAR').toUpperCase().replace('ROLE_', '')
     };
 
     localStorage.setItem('userId', idUrl);
-    localStorage.setItem('userTipo', usuarioUrl.tipo);
-    localStorage.setItem('usuario', JSON.stringify(usuarioUrl));
+    localStorage.setItem('userTipo', usuarioLogado.tipo);
+    localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
 
     window.history.replaceState({}, document.title, window.location.pathname);
-
-    return { usuario: usuarioUrl, idFamiliar: idUrl, tipo: usuarioUrl.tipo };
+    return;
   }
 
-  const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
-  const idFamiliar = usuario.id || localStorage.getItem('userId');
-  const tipo = (usuario.tipo || localStorage.getItem('userTipo') || '').toUpperCase().replace('ROLE_', '');
+  const usuarioSalvo = localStorage.getItem('usuario');
+  if (usuarioSalvo) {
+    try {
+      usuarioLogado = JSON.parse(usuarioSalvo);
+    } catch (e) {
+      usuarioLogado = null;
+    }
+  }
 
-  return { usuario, idFamiliar, tipo };
+  if (!usuarioLogado || !usuarioLogado.id) {
+    const idSolf = localStorage.getItem('userId');
+    const nomeSolf = localStorage.getItem('userNome');
+    const fotoSolf = localStorage.getItem('userFoto');
+    const tipoSolf = localStorage.getItem('userTipo');
+
+    if (idSolf) {
+      usuarioLogado = {
+        id: parseInt(idSolf, 10),
+        nome: nomeSolf || 'Familiar',
+        fotoUrl: fotoSolf || null,
+        tipo: tipoSolf || 'FAMILIAR'
+      };
+    }
+  }
 }
 
 // 1. INICIALIZAÇÃO DA PÁGINA
-document.addEventListener('DOMContentLoaded', async () => {
+async function inicializarHomeFamiliar() {
   if (window.Telegram && window.Telegram.WebApp) {
     window.Telegram.WebApp.ready();
     window.Telegram.WebApp.expand();
   }
 
-  let sessao = getSessaoUsuario();
+  carregarSessaoLocal();
 
-  try {
-    const res = await fetch(API_AUTH_URL, { method: 'GET', credentials: 'include' });
-    if (res.ok) {
-      const usuarioApi = await res.json();
-      if (usuarioApi && usuarioApi.id) {
-        localStorage.setItem('userId', usuarioApi.id);
-        localStorage.setItem('userTipo', usuarioApi.tipo || 'FAMILIAR');
-        localStorage.setItem('usuario', JSON.stringify(usuarioApi));
-        sessao = getSessaoUsuario();
+  if (!usuarioLogado || !usuarioLogado.id) {
+    try {
+      const response = await fetch(API_AUTH_URL, {
+        method: 'GET',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        try {
+          usuarioLogado = await response.json();
+        } catch (e) {
+          console.warn('Falha ao converter JSON da sessão');
+        }
+
+        if (usuarioLogado && usuarioLogado.id) {
+          localStorage.setItem('userId', usuarioLogado.id);
+          localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
+        }
       }
+    } catch (error) {
+      console.warn('Servidor indisponível:', error);
     }
-  } catch (e) {
-    console.warn('Servidor offline ou sem sessão de cookie. Mantendo sessão via ID local/URL.');
   }
 
-  if (!sessao.idFamiliar) {
+  if (!usuarioLogado || !usuarioLogado.id) {
     redirecionarParaLogin();
     return;
   }
@@ -82,69 +124,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   fecharModalVinculo();
   fecharScannerQrCode(true);
 
-  if (typeof window.carregarDadosPerfil === 'function') {
-    await window.carregarDadosPerfil();
-  }
-
-  const btnLogout = document.getElementById('btnLogout');
-  if (btnLogout) {
-    btnLogout.addEventListener('click', fazerLogout);
-  }
-});
-
-async function carregarDadosPerfil() {
-  const { idFamiliar, usuario } = getSessaoUsuario();
-
-  const elemNome = document.getElementById('userName');
-  const elemAvatar = document.getElementById('userAvatar');
-
-  const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Familiar&background=cbd5e0&color=fff';
-
-  // 1. Aplica IMEDIATAMENTE a foto e o nome salvos localmente
-  const fotoCache = usuario.fotoUrl || usuario.imagemUrl || localStorage.getItem('userFoto') || DEFAULT_AVATAR;
-  const nomeCache = usuario.nome || localStorage.getItem('userNome') || `Familiar #${idFamiliar}`;
-
-  if (elemNome) {
-    elemNome.textContent = nomeCache;
-  }
-  if (elemAvatar) {
-    elemAvatar.src = fotoCache;
-  }
-
-  // 2. Busca dados da API sem sobrescrever a foto com avatar padrão caso a API venha vazia
-  if (idFamiliar) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/usuarios/${idFamiliar}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      });
-
-      if (res.ok) {
-        const dadosApi = await res.json();
-        
-        if (elemNome && dadosApi.nome) {
-          elemNome.textContent = dadosApi.nome;
-        }
-
-        const fotoApi = dadosApi.imagemUrl || dadosApi.fotoUrl;
-        if (elemAvatar && fotoApi && fotoApi !== DEFAULT_AVATAR) {
-          elemAvatar.src = fotoApi;
-        }
-      }
-    } catch (err) {
-      console.warn('Servidor offline ou sem sessão. Usando foto local de cache.');
-    }
-  }
-
-  await carregarIdososVinculados(idFamiliar);
+  renderizarPerfil();
+  await carregarIdososVinculados(usuarioLogado.id);
 }
 
+// 2. RENDERIZAÇÃO DO PERFIL DO FAMILIAR (Idêntico ao Idoso)
+function renderizarPerfil() {
+  if (!usuarioLogado) return;
+
+  const nomeElem = document.getElementById('userName');
+  const avatarElem = document.getElementById('userAvatar');
+
+  const foto = usuarioLogado.fotoUrl || 
+               usuarioLogado.imagemUrl || 
+               localStorage.getItem('userFoto') || 
+               DEFAULT_AVATAR;
+
+  const nome = usuarioLogado.nome || 
+               localStorage.getItem('userNome') || 
+               `Familiar #${usuarioLogado.id}`;
+
+  if (nomeElem) nomeElem.textContent = nome;
+  if (avatarElem) avatarElem.src = foto;
+}
+
+// 3. CARREGAR IDOSOS VINCULADOS
 async function carregarIdososVinculados(idFamiliar) {
   const container = document.getElementById('listaIdososVinculados');
   if (!container) return;
 
-  const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Idoso&background=cbd5e0&color=fff';
+  const AVATAR_IDOSO_PADRAO = 'https://ui-avatars.com/api/?name=Idoso&background=cbd5e0&color=fff';
 
   try {
     const endpoints = [
@@ -183,13 +192,13 @@ async function carregarIdososVinculados(idFamiliar) {
 
         const nome = idoso.nome || item.nomeIdoso || item.nome || 'Idoso';
         const idExibicao = idoso.id || item.idIdoso || item.id || '--';
-        const foto = idoso.fotoUrl || idoso.imagemUrl || item.fotoIdosoUrl || item.fotoUrl || DEFAULT_AVATAR;
+        const foto = idoso.fotoUrl || idoso.imagemUrl || item.fotoIdosoUrl || item.fotoUrl || AVATAR_IDOSO_PADRAO;
 
         return `
           <div class="card-idoso" style="border: 1px solid #cbd5e0; padding: 10px 15px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; gap: 10px;">
-            <img src="${foto}" alt="${nome}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+            <img src="${foto}" alt="${escapeHtml(nome)}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
             <div>
-              <strong style="display: block; font-size: 0.95rem; color: #2d3748;">${nome}</strong>
+              <strong style="display: block; font-size: 0.95rem; color: #2d3748;">${escapeHtml(nome)}</strong>
               <small style="color: #64748b;">ID: ${idExibicao}</small>
             </div>
           </div>
@@ -204,7 +213,7 @@ async function carregarIdososVinculados(idFamiliar) {
   }
 }
 
-// 2. MODAL DE OPÇÕES DE VÍNCULO
+// 4. MODAL DE OPÇÕES DE VÍNCULO
 function abrirModalVinculo() {
   const modal = document.getElementById('modalOpcoesVinculo');
   if (modal) {
@@ -226,7 +235,7 @@ function redirecionarVinculo(tipo) {
   window.location.href = `vinculo.html?aba=${tipo}`;
 }
 
-// 3. LEITOR DE QR CODE
+// 5. LEITOR DE QR CODE
 function iniciarLeitorQrCode() {
   fecharModalVinculo();
 
@@ -256,31 +265,22 @@ async function onScanSuccess(decodedText) {
     let idIdoso = null;
     const rawText = decodedText.trim();
 
-    // 1. Caso o QR Code seja um JSON
     if (rawText.startsWith('{') && rawText.endsWith('}')) {
       const parsed = JSON.parse(rawText);
       idIdoso = parsed.idIdoso || parsed.idosoId || parsed.id || parsed.userId;
-    } 
-    // 2. Caso o QR Code seja uma URL ou parâmetro (ex: qrcode.html?id=8 ou ?idIdoso=8)
-    else if (rawText.includes('?')) {
+    } else if (rawText.includes('?')) {
       const queryString = rawText.split('?')[1];
       const urlParams = new URLSearchParams(queryString);
       idIdoso = urlParams.get('id') || urlParams.get('idIdoso') || urlParams.get('idosoId');
-    }
-    // 3. Caso o QR Code contenha apenas números ou texto como "ID: 8"
-    else {
+    } else {
       const match = rawText.match(/\d+/);
-      if (match) {
-        idIdoso = match[0];
-      }
+      if (match) idIdoso = match[0];
     }
 
     const idIdosoParsed = parseInt(idIdoso, 10);
     if (!idIdoso || isNaN(idIdosoParsed)) {
       throw new Error('Não foi possível identificar o ID numérico do idoso no QR Code.');
     }
-
-    const { idFamiliar } = getSessaoUsuario();
 
     exibirStatusScanner('QR Code lido com sucesso! Estabelecendo vínculo...', 'info');
 
@@ -289,7 +289,7 @@ async function onScanSuccess(decodedText) {
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({
-        idFamiliar: parseInt(idFamiliar, 10),
+        idFamiliar: parseInt(usuarioLogado.id, 10),
         idIdoso: idIdosoParsed
       })
     });
@@ -297,9 +297,8 @@ async function onScanSuccess(decodedText) {
     if (response.ok) {
       exibirStatusScanner('Vínculo realizado com sucesso!', 'sucesso');
 
-      // Atualização imediata da lista de idosos vinculados no DOM
-      if (idFamiliar) {
-        await carregarIdososVinculados(idFamiliar);
+      if (usuarioLogado && usuarioLogado.id) {
+        await carregarIdososVinculados(usuarioLogado.id);
       }
 
       setTimeout(async () => {
@@ -316,9 +315,7 @@ async function onScanSuccess(decodedText) {
   }
 }
 
-function onScanError(errorMessage) {
-  // Loop silencioso do leitor de quadros de câmera
-}
+function onScanError(errorMessage) {}
 
 async function fecharScannerQrCode(esconderModal = true) {
   if (esconderModal) {
@@ -349,7 +346,7 @@ function exibirStatusScanner(texto, tipo) {
   }
 }
 
-// 4. NAVEGAÇÃO E LOGOUT
+// 6. NAVEGAÇÃO E LOGOUT
 function mostrarAvisoEmBreve(modulo) {
   alert(`O módulo de ${modulo} estará disponível em breve!`);
 }
@@ -367,11 +364,11 @@ async function fazerLogout() {
       method: 'POST',
       credentials: 'include',
       signal: controller.signal
-    }).catch(err => console.warn('Requisição de logout expirou ou falhou:', err));
+    }).catch(err => console.warn('Logout falhou ou expirou:', err));
 
     clearTimeout(timeoutId);
   } catch (e) {
-    console.warn('Erro ao encerrar sessão no servidor:', e);
+    console.warn('Erro no servidor:', e);
   } finally {
     localStorage.clear();
     sessionStorage.clear();
@@ -385,8 +382,17 @@ function redirecionarParaLogin() {
   window.location.href = 'index.html';
 }
 
-// Exposição global para chamadas inline HTML (onclick)
-window.carregarDadosPerfil = carregarDadosPerfil;
+// INICIALIZAÇÃO VIA DOMCONTENTLOADED
+document.addEventListener('DOMContentLoaded', async () => {
+  await inicializarHomeFamiliar();
+
+  const btnLogout = document.getElementById('btnLogout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', fazerLogout);
+  }
+});
+
+// Exposição de funções para chamadas inline no HTML
 window.carregarIdososVinculados = carregarIdososVinculados;
 window.abrirModalVinculo = abrirModalVinculo;
 window.fecharModalVinculo = fecharModalVinculo;

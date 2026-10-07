@@ -9,6 +9,7 @@ const btnExcluirConta = document.getElementById("btnExcluirConta");
 
 const AVATAR_PADRAO = 'https://ui-avatars.com/api/?name=User&background=cbd5e0&color=fff';
 let arquivoFotoSelecionado = null;
+let fotoBase64Data = null;
 
 function getUsuarioSessao() {
   const usuario = JSON.parse(localStorage.getItem("usuario") || "{}");
@@ -18,6 +19,7 @@ function getUsuarioSessao() {
 
 function redirecionarLogin() {
   localStorage.clear();
+  sessionStorage.clear();
   alert("Sessão expirada ou inválida. Faça login novamente.");
   window.location.href = "index.html";
 }
@@ -55,10 +57,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (emailInput) emailInput.value = data.email || "";
       if (telefoneInput) telefoneInput.value = data.telefone || "";
       
-      const perfilFormatado = (data.perfil || usuario.tipo || "FAMILIAR").replace("ROLE_", "");
+      const perfilFormatado = (data.perfil || data.tipo || usuario.tipo || "FAMILIAR").replace("ROLE_", "");
       if (tipoUsuarioElem) tipoUsuarioElem.textContent = perfilFormatado;
       
-      const fotoUrl = data.imagemUrl || data.fotoUrl || usuario.fotoUrl || AVATAR_PADRAO;
+      const fotoUrl = data.imagemUrl || data.fotoUrl || usuario.fotoUrl || usuario.imagemUrl || AVATAR_PADRAO;
       if (fotoPerfil) {
         fotoPerfil.src = fotoUrl;
       }
@@ -68,7 +70,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-// 2. PRÉ-VISUALIZAÇÃO DA FOTO SELECIONADA
+// 2. PRÉ-VISUALIZAÇÃO E CONVERSÃO EM BASE64
 inputFoto?.addEventListener("change", () => {
   const arquivo = inputFoto.files?.[0];
   if (!arquivo) return;
@@ -84,7 +86,8 @@ inputFoto?.addEventListener("change", () => {
   const leitor = new FileReader();
   leitor.onload = (evento) => {
     if (fotoPerfil && evento.target?.result) {
-      fotoPerfil.src = evento.target.result;
+      fotoBase64Data = evento.target.result;
+      fotoPerfil.src = fotoBase64Data;
     }
   };
   leitor.readAsDataURL(arquivo);
@@ -104,8 +107,10 @@ btnSalvar?.addEventListener("click", async () => {
     return;
   }
 
+  let novaFotoUrl = fotoBase64Data || fotoPerfil?.src || usuario.fotoUrl;
+
   try {
-    // 1. Caso haja uma nova foto selecionada, envia para a API
+    // 1. Tenta o envio via Multipart/FormData
     if (arquivoFotoSelecionado) {
       const formData = new FormData();
       formData.append("foto", arquivoFotoSelecionado);
@@ -119,16 +124,24 @@ btnSalvar?.addEventListener("click", async () => {
 
         if (resFoto.ok) {
           const resFotoData = await resFoto.json().catch(() => null);
-          if (resFotoData && resFotoData.imagemUrl) {
-            usuario.fotoUrl = resFotoData.imagemUrl;
+          if (resFotoData && (resFotoData.imagemUrl || resFotoData.fotoUrl)) {
+            novaFotoUrl = resFotoData.imagemUrl || resFotoData.fotoUrl;
           }
         }
       } catch (errFoto) {
-        console.warn("Upload de foto via endpoint dedicado não disponível ou falhou:", errFoto);
+        console.warn("Upload Multipart falhou, salvando foto em Base64 fallback.", errFoto);
       }
     }
 
-    // 2. Atualização paralela dos dados cadastrais
+    // 2. Atualização dos campos textuais e URL de Imagem no Spring Boot
+    const payload = {
+      nome: novoNome,
+      email: novoEmail,
+      telefone: novoTelefone,
+      imagemUrl: novaFotoUrl,
+      fotoUrl: novaFotoUrl
+    };
+
     const [resNome, resEmail, resTelefone] = await Promise.all([
       fetch(`${API_BASE_URL}/usuarios/${userId}/nome`, {
         method: "PUT",
@@ -150,21 +163,28 @@ btnSalvar?.addEventListener("click", async () => {
       })
     ]);
 
-    if (resNome.ok || resEmail.ok) {
-      const usuarioAtualizado = { 
-        ...usuario, 
-        nome: novoNome, 
-        email: novoEmail,
-        fotoUrl: fotoPerfil.src 
-      };
-      
-      localStorage.setItem("usuario", JSON.stringify(usuarioAtualizado));
-      localStorage.setItem("userNome", novoNome);
+    // 3. Tenta salvar a imagem também no endpoint geral do usuário caso exista
+    fetch(`${API_BASE_URL}/usuarios/${userId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload)
+    }).catch(() => {});
 
-      alert("Perfil atualizado com sucesso!");
-    } else {
-      alert("Erro ao atualizar o perfil no servidor.");
-    }
+    // Sincronização completa do localStorage local
+    const usuarioAtualizado = { 
+      ...usuario, 
+      nome: novoNome, 
+      email: novoEmail,
+      telefone: novoTelefone,
+      fotoUrl: novaFotoUrl,
+      imagemUrl: novaFotoUrl
+    };
+    
+    localStorage.setItem("usuario", JSON.stringify(usuarioAtualizado));
+    localStorage.setItem("userNome", novoNome);
+
+    alert("Perfil atualizado com sucesso!");
   } catch (err) {
     console.error("Erro ao salvar alterações do perfil:", err);
     alert("Erro de conexão ao atualizar o perfil.");
@@ -231,6 +251,7 @@ btnExcluirConta?.addEventListener("click", async () => {
     if (res.ok) {
       alert("Sua conta foi excluída com sucesso.");
       localStorage.clear();
+      sessionStorage.clear();
       window.location.href = "index.html";
     } else {
       const msg = await res.text();

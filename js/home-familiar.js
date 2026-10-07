@@ -98,12 +98,49 @@ async function carregarDadosPerfil() {
   const elemNome = document.getElementById('userName');
   const elemAvatar = document.getElementById('userAvatar');
 
+  const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Familiar&background=cbd5e0&color=fff';
+
+  // 1. Tenta carregar do backend para manter a foto atualizada
+  if (idFamiliar) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/usuarios/${idFamiliar}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+
+      if (res.ok) {
+        const dadosApi = await res.json();
+        
+        if (elemNome) {
+          elemNome.textContent = dadosApi.nome || usuario.nome || `Familiar #${idFamiliar}`;
+        }
+
+        const fotoAtualizada = dadosApi.imagemUrl || dadosApi.fotoUrl || usuario.fotoUrl || usuario.imagemUrl || DEFAULT_AVATAR;
+
+        if (elemAvatar) {
+          elemAvatar.src = fotoAtualizada;
+        }
+
+        // Atualiza cache local
+        const usuarioCache = { ...usuario, ...dadosApi, fotoUrl: fotoAtualizada };
+        localStorage.setItem('usuario', JSON.stringify(usuarioCache));
+        
+        await carregarIdososVinculados(idFamiliar);
+        return;
+      }
+    } catch (err) {
+      console.warn('Falha ao buscar dados atualizados do perfil via API, usando cache local.', err);
+    }
+  }
+
+  // Fallback com dados do localStorage
   if (elemNome) {
     elemNome.textContent = usuario.nome || `Familiar #${idFamiliar}`;
   }
 
-  if (elemAvatar && (usuario.fotoUrl || usuario.imagemUrl)) {
-    elemAvatar.src = usuario.fotoUrl || usuario.imagemUrl;
+  if (elemAvatar) {
+    elemAvatar.src = usuario.fotoUrl || usuario.imagemUrl || DEFAULT_AVATAR;
   }
 
   await carregarIdososVinculados(idFamiliar);

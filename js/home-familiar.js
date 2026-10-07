@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   fecharScannerQrCode(true);
 
   if (typeof window.carregarDadosPerfil === 'function') {
-    window.carregarDadosPerfil();
+    await window.carregarDadosPerfil();
   }
 
   const btnLogout = document.getElementById('btnLogout');
@@ -100,7 +100,18 @@ async function carregarDadosPerfil() {
 
   const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Familiar&background=cbd5e0&color=fff';
 
-  // 1. Tenta carregar do backend para manter a foto atualizada
+  // 1. Aplica IMEDIATAMENTE a foto e o nome salvos localmente
+  const fotoCache = usuario.fotoUrl || usuario.imagemUrl || localStorage.getItem('userFoto') || DEFAULT_AVATAR;
+  const nomeCache = usuario.nome || localStorage.getItem('userNome') || `Familiar #${idFamiliar}`;
+
+  if (elemNome) {
+    elemNome.textContent = nomeCache;
+  }
+  if (elemAvatar) {
+    elemAvatar.src = fotoCache;
+  }
+
+  // 2. Busca dados da API sem sobrescrever a foto com avatar padrão caso a API venha vazia
   if (idFamiliar) {
     try {
       const res = await fetch(`${API_BASE_URL}/usuarios/${idFamiliar}`, {
@@ -112,35 +123,18 @@ async function carregarDadosPerfil() {
       if (res.ok) {
         const dadosApi = await res.json();
         
-        if (elemNome) {
-          elemNome.textContent = dadosApi.nome || usuario.nome || `Familiar #${idFamiliar}`;
+        if (elemNome && dadosApi.nome) {
+          elemNome.textContent = dadosApi.nome;
         }
 
-        const fotoAtualizada = dadosApi.imagemUrl || dadosApi.fotoUrl || usuario.fotoUrl || usuario.imagemUrl || DEFAULT_AVATAR;
-
-        if (elemAvatar) {
-          elemAvatar.src = fotoAtualizada;
+        const fotoApi = dadosApi.imagemUrl || dadosApi.fotoUrl;
+        if (elemAvatar && fotoApi && fotoApi !== DEFAULT_AVATAR) {
+          elemAvatar.src = fotoApi;
         }
-
-        // Atualiza cache local
-        const usuarioCache = { ...usuario, ...dadosApi, fotoUrl: fotoAtualizada };
-        localStorage.setItem('usuario', JSON.stringify(usuarioCache));
-        
-        await carregarIdososVinculados(idFamiliar);
-        return;
       }
     } catch (err) {
-      console.warn('Falha ao buscar dados atualizados do perfil via API, usando cache local.', err);
+      console.warn('Servidor offline ou sem sessão. Usando foto local de cache.');
     }
-  }
-
-  // Fallback com dados do localStorage
-  if (elemNome) {
-    elemNome.textContent = usuario.nome || `Familiar #${idFamiliar}`;
-  }
-
-  if (elemAvatar) {
-    elemAvatar.src = usuario.fotoUrl || usuario.imagemUrl || DEFAULT_AVATAR;
   }
 
   await carregarIdososVinculados(idFamiliar);
@@ -303,7 +297,7 @@ async function onScanSuccess(decodedText) {
     if (response.ok) {
       exibirStatusScanner('Vínculo realizado com sucesso!', 'sucesso');
 
-      // Atualização imediata do grid de idosos na DOM
+      // Atualização imediata da lista de idosos vinculados no DOM
       if (idFamiliar) {
         await carregarIdososVinculados(idFamiliar);
       }
@@ -323,7 +317,7 @@ async function onScanSuccess(decodedText) {
 }
 
 function onScanError(errorMessage) {
-  // Loop silencioso da busca por quadros de câmeras
+  // Loop silencioso do leitor de quadros de câmera
 }
 
 async function fecharScannerQrCode(esconderModal = true) {

@@ -67,6 +67,23 @@ function comprimirImagem(file, maxWidth = 200, maxHeight = 200, quality = 0.7) {
   });
 }
 
+function limparSessaoManterFotos() {
+  const chavesFotos = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("user_foto_")) {
+      chavesFotos[key] = localStorage.getItem(key);
+    }
+  }
+  
+  localStorage.clear();
+  sessionStorage.clear();
+
+  Object.keys(chavesFotos).forEach(k => {
+    localStorage.setItem(k, chavesFotos[k]);
+  });
+}
+
 // 1. CARREGAR DADOS DO PERFIL
 document.addEventListener("DOMContentLoaded", async () => {
   const { usuario, userId } = getUsuarioSessao();
@@ -107,7 +124,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (res.ok) {
       const data = await res.json();
-      usuarioOriginal = data; // Guarda dados originais vindos do banco
+      usuarioOriginal = data;
 
       if (nomeInput && data.nome) nomeInput.value = data.nome;
       if (emailInput && data.email) emailInput.value = data.email;
@@ -145,8 +162,9 @@ inputFoto?.addEventListener("change", async () => {
   }
 });
 
-// 3. SALVAR ALTERAÇÕES (EXECUTADO EM SEQUÊNCIA PARA EVITAR DADOS CORROMPIDOS)
-btnSalvar?.addEventListener("click", async () => {
+// 3. SALVAR ALTERAÇÕES
+btnSalvar?.addEventListener("click", async (e) => {
+  if (e) e.preventDefault();
   const { usuario, userId } = getUsuarioSessao();
   if (!userId) return redirecionarLogin();
 
@@ -162,9 +180,6 @@ btnSalvar?.addEventListener("click", async () => {
   const novaFotoUrl = fotoBase64Comprimida || fotoPerfil?.src || usuario.fotoUrl || AVATAR_PADRAO;
 
   try {
-    // Atualização sequencial ordenada (evita concorrência no JPA)
-    
-    // a) Atualiza Foto
     if (fotoBase64Comprimida) {
       await fetch(`${API_BASE_URL}/usuarios/${userId}/foto`, {
         method: "PUT",
@@ -174,7 +189,6 @@ btnSalvar?.addEventListener("click", async () => {
       });
     }
 
-    // b) Atualiza Nome (apenas se alterado)
     if (!usuarioOriginal || usuarioOriginal.nome !== novoNome) {
       await fetch(`${API_BASE_URL}/usuarios/${userId}/nome`, {
         method: "PUT",
@@ -184,7 +198,6 @@ btnSalvar?.addEventListener("click", async () => {
       });
     }
 
-    // c) Atualiza E-mail (apenas se alterado)
     if (!usuarioOriginal || usuarioOriginal.email !== novoEmail) {
       await fetch(`${API_BASE_URL}/usuarios/${userId}/email`, {
         method: "PUT",
@@ -194,7 +207,6 @@ btnSalvar?.addEventListener("click", async () => {
       });
     }
 
-    // d) Atualiza Telefone (apenas se alterado)
     if (!usuarioOriginal || usuarioOriginal.telefone !== novoTelefone) {
       await fetch(`${API_BASE_URL}/usuarios/${userId}/telefone`, {
         method: "PUT",
@@ -234,7 +246,8 @@ btnSalvar?.addEventListener("click", async () => {
 });
 
 // 4. ALTERAR SENHA
-btnAlterarSenha?.addEventListener("click", async () => {
+btnAlterarSenha?.addEventListener("click", async (e) => {
+  if (e) e.preventDefault();
   const { userId } = getUsuarioSessao();
   if (!userId) return redirecionarLogin();
 
@@ -270,13 +283,16 @@ btnAlterarSenha?.addEventListener("click", async () => {
 });
 
 // 5. SAIR DA CONTA
-btnSair?.addEventListener("click", () => {
+btnSair?.addEventListener("click", (e) => {
+  if (e) e.preventDefault();
   limparSessaoManterFotos();
   window.location.href = "index.html";
 });
 
 // 6. EXCLUIR CONTA
-btnExcluirConta?.addEventListener("click", async () => {
+btnExcluirConta?.addEventListener("click", async (e) => {
+  if (e) e.preventDefault();
+  
   const { userId } = getUsuarioSessao();
   if (!userId) return redirecionarLogin();
 
@@ -286,10 +302,11 @@ btnExcluirConta?.addEventListener("click", async () => {
   try {
     const res = await fetch(`${API_BASE_URL}/usuarios/${userId}`, {
       method: "DELETE",
+      headers: { "Content-Type": "application/json" },
       credentials: "include"
     });
 
-    if (res.ok) {
+    if (res.ok || res.status === 204) {
       alert("Sua conta foi excluída com sucesso.");
       localStorage.clear();
       sessionStorage.clear();
@@ -303,20 +320,3 @@ btnExcluirConta?.addEventListener("click", async () => {
     alert("Erro de conexão ao tentar excluir a conta.");
   }
 });
-
-function limparSessaoManterFotos() {
-  const chavesFotos = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith("user_foto_")) {
-      chavesFotos[key] = localStorage.getItem(key);
-    }
-  }
-  
-  localStorage.clear();
-  sessionStorage.clear();
-
-  Object.keys(chavesFotos).forEach(k => {
-    localStorage.setItem(k, chavesFotos[k]);
-  });
-}

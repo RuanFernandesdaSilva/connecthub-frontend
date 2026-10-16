@@ -255,7 +255,17 @@ async function carregarIdososVinculados(idFamiliar) {
 
         const nome = idoso.nome || item.nomeIdoso || item.nome || 'Idoso';
         const idExibicao = idoso.id || item.idIdoso || item.id || '--';
-        const foto = idoso.fotoUrl || idoso.imagemUrl || item.fotoIdosoUrl || item.fotoUrl || AVATAR_IDOSO_PADRAO;
+
+        // Suporte abrangente para campo 'foto' e fallback no localStorage
+        const fotoSalvaLocal = localStorage.getItem(`user_foto_${idExibicao}`);
+        const foto = idoso.fotoUrl || 
+                     idoso.imagemUrl || 
+                     idoso.foto || 
+                     item.fotoIdosoUrl || 
+                     item.fotoUrl || 
+                     item.foto || 
+                     fotoSalvaLocal || 
+                     AVATAR_IDOSO_PADRAO;
 
         return `
           <div class="card-idoso" style="border: 1px solid #cbd5e0; padding: 10px 15px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; gap: 10px;">

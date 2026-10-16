@@ -155,13 +155,12 @@ async function inicializarHomeFamiliar() {
     return;
   }
 
-  fecharModalVinculo();
   fecharScannerQrCode(true);
 
   // Renderização inicial através do cache local
   renderizarPerfil();
 
-  // Consulta o Spring Boot para recuperar a foto do banco caso o localStorage tenha sido limpo
+  // Consulta o Spring Boot para recuperar a foto do banco
   if (usuarioLogado && usuarioLogado.id) {
     try {
       const res = await fetchAutenticado(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
@@ -182,7 +181,6 @@ async function inicializarHomeFamiliar() {
           localStorage.setItem('userFoto', fotoAtualizada);
           if (dadosPerfil.nome) localStorage.setItem('userNome', dadosPerfil.nome);
 
-          // Atualiza o DOM imediatamente após recuperar do servidor
           renderizarPerfil();
         }
       }
@@ -278,32 +276,8 @@ async function carregarIdososVinculados(idFamiliar) {
   }
 }
 
-// 4. MODAL DE OPÇÕES DE VÍNCULO
-function abrirModalVinculo() {
-  const modal = document.getElementById('modalOpcoesVinculo');
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-  }
-}
-
-function fecharModalVinculo() {
-  const modal = document.getElementById('modalOpcoesVinculo');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-}
-
-function redirecionarVinculo(tipo) {
-  fecharModalVinculo();
-  window.location.href = `vinculo.html?aba=${tipo}`;
-}
-
-// 5. LEITOR DE QR CODE
+// 4. LEITOR DE QR CODE
 function iniciarLeitorQrCode() {
-  fecharModalVinculo();
-
   const modalScanner = document.getElementById('modalScanner');
   if (modalScanner) {
     modalScanner.classList.remove('hidden');
@@ -410,7 +384,7 @@ function exibirStatusScanner(texto, tipo) {
   }
 }
 
-// 6. NAVEGAÇÃO E LOGOUT
+// 5. NAVEGAÇÃO E LOGOUT
 function mostrarAvisoEmBreve(modulo) {
   alert(`O módulo de ${modulo} estará disponível em breve!`);
 }
@@ -455,11 +429,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Exposição de funções para chamadas inline no HTML
+// Exposição global das funções chamadas no HTML
 window.carregarIdososVinculados = carregarIdososVinculados;
-window.abrirModalVinculo = abrirModalVinculo;
-window.fecharModalVinculo = fecharModalVinculo;
-window.redirecionarVinculo = redirecionarVinculo;
 window.iniciarLeitorQrCode = iniciarLeitorQrCode;
 window.fecharScannerQrCode = fecharScannerQrCode;
 window.mostrarAvisoEmBreve = mostrarAvisoEmBreve;

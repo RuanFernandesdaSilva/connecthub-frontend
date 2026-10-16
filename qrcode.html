@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vitalis - Meu QR Code</title>
+  <style>
+    :root {
+      --primary-color: #1a365d;
+      --secondary-color: #2b6cb0;
+      --background-color: #f7fafc;
+      --card-background: #ffffff;
+      --text-color: #2d3748;
+      --text-muted: #718096;
+      --border-radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--background-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      background-color: var(--card-background);
+      border-radius: var(--border-radius);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      padding: 32px 24px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .header-title {
+      color: var(--primary-color);
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .header-subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+
+    .user-info {
+      background-color: #edf2f7;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .user-name {
+      font-weight: 600;
+      color: var(--primary-color);
+      font-size: 1.1rem;
+    }
+
+    .user-id {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .qrcode-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #ffffff;
+      padding: 16px;
+      border: 2px dashed #cbd5e0;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      min-height: 250px;
+    }
+
+    .qrcode-wrapper img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      display: block;
+    }
+
+    .btn-voltar {
+      background-color: var(--primary-color);
+      color: #ffffff;
+      border: none;
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s ease;
+    }
+
+    .btn-voltar:hover {
+      background-color: var(--secondary-color);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1 class="header-title">Meu QR Code Vitalis</h1>
+    <p class="header-subtitle">Apresente este código para vincular a conta do seu familiar.</p>
+
+    <div class="user-info">
+      <div class="user-name" id="idosoNome">Carregando...</div>
+      <div class="user-id">ID de Identificação: <span id="idosoIdDisplay">--</span></div>
+    </div>
+
+    <!-- Container do QR Code que recebe a tag img do Java -->
+    <div id="qrcodeContainer" class="qrcode-wrapper">
+      <img id="qrCodeImg" src="" alt="QR Code do Idoso" width="220" height="220" />
+    </div>
+
+    <button type="button" class="btn-voltar" onclick="voltarParaHome()">Voltar para a Home</button>
+  </div>
+
+  <script type="module" src="js/qrcode.js"></script>
+</body>
+</html>

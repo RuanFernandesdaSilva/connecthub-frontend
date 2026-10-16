@@ -1,0 +1,238 @@
+:root {
+  --primary-color: #3498db;
+  --primary-hover: #2980b9;
+  --success-color: #2ecc71;
+  --danger-color: #e74c3c;
+  --bg-color: #f4f7f6;
+  --card-bg: #ffffff;
+  --text-color: #2c3e50;
+  --text-muted: #7f8c8d;
+  --border-color: #e2e8f0;
+  --radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+header h1 {
+  font-size: 1.8rem;
+  color: var(--text-color);
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* Painel da Sessão */
+.user-selector-card {
+  background: var(--card-bg);
+  padding: 15px 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  margin-bottom: 20px;
+}
+
+/* Formulários e Inputs */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.card {
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+input, select {
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  outline: none;
+}
+
+/* Abas de Navegação */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  position: relative;
+}
+
+.tab-btn.active {
+  color: var(--primary-color);
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: var(--primary-color);
+}
+
+.badge {
+  background: var(--danger-color);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: 5px;
+}
+
+/* Conteúdo das Abas */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.qrcode-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+/* Botões */
+.btn {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary { background: var(--primary-color); color: #fff; width: 100%; }
+.btn-primary:hover { background: var(--primary-hover); }
+
+.btn-sucesso { background: var(--success-color); color: #fff; width: 100%; }
+.btn-perigo { background: var(--danger-color); color: #fff; }
+
+/* Grid de Usuários */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.user-card {
+  background: var(--card-bg);
+  padding: 15px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.user-card img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-info h4 { font-size: 1rem; }
+.user-info p { font-size: 0.85rem; color: var(--text-muted); }
+
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.status-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  border-radius: 12px;
+  margin-top: 5px;
+}
+
+.status-ativo { background: #e8f8f0; color: var(--success-color); }
+
+/* Alertas de Feedback */
+.alert {
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.alert-sucesso { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.alert-erro { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+.hidden { display: none !important; }
+.empty-msg { text-align: center; color: var(--text-muted); padding: 20px; width: 100%; }
+
+.navigation-links {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.navigation-links a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.navigation-links a:hover {
+  text-decoration: underline;
+}

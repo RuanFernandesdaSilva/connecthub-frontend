@@ -5,6 +5,26 @@ const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Familiar&background=cbd
 let html5QrCodeScanner = null;
 let usuarioLogado = null;
 
+// Helper global para requisições autenticadas e tratamento de sessão expirada (401)
+async function fetchAutenticado(url, options = {}) {
+  options.credentials = 'include'; // Garante o envio do cookie JSESSIONID
+
+  try {
+    const response = await fetch(url, options);
+
+    if (response.status === 401) {
+      alert('Sua sessão expirou. Por favor, faça login novamente.');
+      redirecionarParaLogin();
+      return null;
+    }
+
+    return response;
+  } catch (error) {
+    console.warn(`Erro na requisição HTTP (${url}):`, error);
+    throw error;
+  }
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -27,7 +47,7 @@ function fecharEFinalizarWebApp() {
 }
 
 /**
- * Lê e consolida a sessão local (idêntico ao mecanismo do idoso)
+ * Lê e consolida a sessão local
  */
 function carregarSessaoLocal() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -94,12 +114,9 @@ async function inicializarHomeFamiliar() {
 
   if (!usuarioLogado || !usuarioLogado.id) {
     try {
-      const response = await fetch(API_AUTH_URL, {
-        method: 'GET',
-        credentials: 'include'
-      });
+      const response = await fetchAutenticado(API_AUTH_URL, { method: 'GET' });
 
-      if (response.ok) {
+      if (response && response.ok) {
         try {
           const dadosApi = await response.json();
           if (dadosApi && dadosApi.id) {
@@ -136,16 +153,15 @@ async function inicializarHomeFamiliar() {
   // Renderização inicial através do cache local
   renderizarPerfil();
 
-  // Consulta o Spring Boot para recuperar a foto do banco caso o localStorage tenha sido limpo no logout
+  // Consulta o Spring Boot para recuperar a foto do banco caso o localStorage tenha sido limpo
   if (usuarioLogado && usuarioLogado.id) {
     try {
-      const res = await fetch(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
+      const res = await fetchAutenticado(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        headers: { 'Content-Type': 'application/json' }
       });
 
-      if (res.ok) {
+      if (res && res.ok) {
         const dadosPerfil = await res.json();
         const fotoAtualizada = dadosPerfil.fotoUrl || dadosPerfil.imagemUrl || dadosPerfil.foto;
 
@@ -170,7 +186,7 @@ async function inicializarHomeFamiliar() {
   await carregarIdososVinculados(usuarioLogado.id);
 }
 
-// 2. RENDERIZAÇÃO DO PERFIL DO FAMILIAR (Idêntico ao Idoso)
+// 2. RENDERIZAÇÃO DO PERFIL DO FAMILIAR
 function renderizarPerfil() {
   if (!usuarioLogado) return;
 
@@ -207,12 +223,11 @@ async function carregarIdososVinculados(idFamiliar) {
     let response = null;
     for (const url of endpoints) {
       try {
-        const res = await fetch(url, {
+        const res = await fetchAutenticado(url, {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include'
+          headers: { 'Content-Type': 'application/json' }
         });
-        if (res.ok) {
+        if (res && res.ok) {
           response = res;
           break;
         }
@@ -326,17 +341,16 @@ async function onScanSuccess(decodedText) {
 
     exibirStatusScanner('QR Code lido com sucesso! Estabelecendo vínculo...', 'info');
 
-    const response = await fetch(`${API_VINCULO_URL}/qrcode`, {
+    const response = await fetchAutenticado(`${API_VINCULO_URL}/qrcode`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify({
         idFamiliar: parseInt(usuarioLogado.id, 10),
         idIdoso: idIdosoParsed
       })
     });
 
-    if (response.ok) {
+    if (response && response.ok) {
       exibirStatusScanner('Vínculo realizado com sucesso!', 'sucesso');
 
       if (usuarioLogado && usuarioLogado.id) {
@@ -346,7 +360,7 @@ async function onScanSuccess(decodedText) {
       setTimeout(async () => {
         await fecharScannerQrCode(true);
       }, 1200);
-    } else {
+    } else if (response) {
       const erroText = await response.text();
       exibirStatusScanner(`Erro ao vincular: ${erroText || 'Solicitação recusada pelo servidor.'}`, 'erro');
     }
@@ -402,9 +416,8 @@ async function fazerLogout() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1200);
 
-    await fetch(`${API_AUTH_URL}/logout`, {
+    await fetchAutenticado(`${API_AUTH_URL}/logout`, {
       method: 'POST',
-      credentials: 'include',
       signal: controller.signal
     }).catch(err => console.warn('Logout falhou ou expirou:', err));
 

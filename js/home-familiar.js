@@ -5,14 +5,22 @@ const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Familiar&background=cbd
 let html5QrCodeScanner = null;
 let usuarioLogado = null;
 
-// Helper global para requisições autenticadas e tratamento de sessão expirada (401)
+// Helper global para requisições autenticadas com suporte a fallback de ID de usuário
 async function fetchAutenticado(url, options = {}) {
-  options.credentials = 'include'; // Garante o envio do cookie JSESSIONID
+  options.credentials = 'include'; // Tenta enviar cookie JSESSIONID
+
+  // Injeta o ID salvo localmente no header de fallback
+  const userIdSalvo = localStorage.getItem('userId');
+  options.headers = {
+    ...options.headers,
+    'X-User-Id': userIdSalvo || ''
+  };
 
   try {
     const response = await fetch(url, options);
 
     if (response.status === 401) {
+      console.warn('Sessão expirada no servidor (401). Redirecionando...');
       alert('Sua sessão expirou. Por favor, faça login novamente.');
       redirecionarParaLogin();
       return null;

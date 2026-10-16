@@ -4,6 +4,34 @@ const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=Idoso&background=cbd5e0
 
 let usuarioLogado = null;
 
+// Helper global para requisições autenticadas com suporte a fallback de ID de usuário
+async function fetchAutenticado(url, options = {}) {
+  options.credentials = 'include'; // Tenta enviar cookie JSESSIONID
+
+  // Injeta o ID salvo localmente no header de fallback
+  const userIdSalvo = localStorage.getItem('userId');
+  options.headers = {
+    ...options.headers,
+    'X-User-Id': userIdSalvo || ''
+  };
+
+  try {
+    const response = await fetch(url, options);
+
+    if (response.status === 401) {
+      console.warn('Sessão expirada no servidor (401). Redirecionando...');
+      alert('Sua sessão expirou. Por favor, faça login novamente.');
+      redirecionarParaLogin();
+      return null;
+    }
+
+    return response;
+  } catch (error) {
+    console.warn(`Erro na requisição HTTP (${url}):`, error);
+    throw error;
+  }
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
@@ -97,12 +125,9 @@ async function inicializarHomeIdoso() {
 
   if (!usuarioLogado || !usuarioLogado.id) {
     try {
-      const response = await fetch(API_AUTH_URL, {
-        method: 'GET',
-        credentials: 'include'
-      });
+      const response = await fetchAutenticado(API_AUTH_URL, { method: 'GET' });
 
-      if (response.ok) {
+      if (response && response.ok) {
         try {
           const dadosApi = await response.json();
           if (dadosApi && dadosApi.id) {
@@ -140,13 +165,12 @@ async function inicializarHomeIdoso() {
 
   if (usuarioLogado && usuarioLogado.id) {
     try {
-      const res = await fetch(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
+      const res = await fetchAutenticado(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
+        headers: { 'Content-Type': 'application/json' }
       });
 
-      if (res.ok) {
+      if (res && res.ok) {
         const dadosPerfil = await res.json();
         const fotoAtualizada = dadosPerfil.fotoUrl || dadosPerfil.imagemUrl || dadosPerfil.foto || localStorage.getItem(`user_foto_${usuarioLogado.id}`);
 
@@ -209,12 +233,11 @@ async function carregarFamiliaresVinculados(idosoId) {
     let response = null;
     for (const url of endpoints) {
       try {
-        const res = await fetch(url, {
+        const res = await fetchAutenticado(url, {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include'
+          headers: { 'Content-Type': 'application/json' }
         });
-        if (res.ok) {
+        if (res && res.ok) {
           response = res;
           break;
         }
@@ -304,9 +327,8 @@ async function fazerLogout() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1200);
 
-    await fetch(`${API_AUTH_URL}/logout`, {
+    await fetchAutenticado(`${API_AUTH_URL}/logout`, {
       method: 'POST',
-      credentials: 'include',
       signal: controller.signal
     }).catch(err => console.warn('Requisição de logout expirou ou falhou:', err));
 

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vitalis - Meus Remédios</title>
+  <link rel="stylesheet" href="css/home-idoso.css">
+  <style>
+    .dose-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+      border-left: 10px solid #cbd5e0;
+    }
+    .dose-card.cor-VERMELHO { border-left-color: #e53e3e; }
+    .dose-card.cor-LARANJA  { border-left-color: #dd6b20; }
+    .dose-card.cor-AMARELO  { border-left-color: #d69e2e; }
+    .dose-card.cor-VERDE    { border-left-color: #38a169; }
+    .dose-card.cor-AZUL     { border-left-color: #3182ce; }
+    .dose-card.cor-ROXO     { border-left-color: #805ad5; }
+    .dose-card.cor-MARROM   { border-left-color: #744210; }
+    .dose-card.cor-BRANCO   { border-left-color: #e2e8f0; }
+    .dose-card.cor-PRETO    { border-left-color: #1a202c; }
+
+    .btn-confirmar {
+      width: 100%;
+      padding: 14px;
+      margin-top: 12px;
+      background-color: #38a169;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-confirmar:active { transform: scale(0.98); }
+    .btn-voltar { background: transparent; border: none; color: #4a5568; cursor: pointer; font-weight: bold; margin-bottom: 15px; font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container" style="max-width: 500px; padding: 20px;">
+    
+    <button type="button" class="btn-voltar" onclick="voltarParaHome()">
+      ← Voltar ao Painel
+    </button>
+
+    <header class="card" style="margin-bottom: 20px;">
+      <h2>🔔 Próximas Doses</h2>
+      <p style="color: #4a5568;">Confira a cor da sua caixa e confirme quando tomar o remédio:</p>
+    </header>
+
+    <div id="listaDoses">
+      <p style="color: #718096; text-align: center;">Buscando seus remédios...</p>
+    </div>
+  </div>
+
+  <script type="module" src="js/medicamentos-idoso.js"></script>
+</body>
+</html>

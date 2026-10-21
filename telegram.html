@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vitalis - Conectar Telegram</title>
+
+  <!-- Script oficial do Telegram WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/telegram.css">
+
+  <!-- PROTEÇÃO DE ROTA AUTOMÁTICA -->
+  <script>
+    (function verificarConexaoExistente() {
+      const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+      if (usuario.id && usuario.telegramConectado) {
+        const destino = usuario.tipo === 'IDOSO' ? 'home-idoso.html' : 'home-familiar.html';
+        window.location.href = `${destino}?id=${usuario.id}&tipo=${usuario.tipo}`;
+      }
+    })();
+  </script>
+</head>
+<body>
+
+  <div class="card-container">
+    <i class="fab fa-telegram-plane telegram-icon"></i>
+    <h2>Conectar com Telegram</h2>
+    
+    <div id="responseMessage" class="message"></div>
+
+    <p>Vincule sua conta ao <strong>Vitalis Care</strong> para receber lembretes de saúde, avisos de compromissos e alertas diretamente no Telegram.</p>
+
+    <div id="statusUsuario" class="user-badge">
+      Verificando sessão...
+    </div>
+
+    <a id="btnConectarTelegram" href="#" target="_blank" class="btn-telegram btn-disabled">
+      <i class="fab fa-telegram-plane"></i> Conectar com Telegram
+    </a>
+
+    <!-- Botão para retornar ao Aplicativo -->
+    <button onclick="voltarParaAplicativo()" class="btn-voltar" style="margin-top: 15px; width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; background-color: #f8f9fa; cursor: pointer; font-weight: bold;">
+      <i class="fas fa-arrow-left"></i> Voltar para o Aplicativo
+    </button>
+
+    <!-- Botão exibido se esta tela for aberta dentro do WebApp do Telegram -->
+    <button onclick="fecharJanela()" class="btn-fechar" style="margin-top: 10px; display: none;" id="btnSair">
+      Voltar para o Chat
+    </button>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    if (tg && tg.initData) {
+        tg.expand();
+        document.getElementById('btnSair').style.display = 'block';
+    }
+
+    function fecharJanela() {
+        tg.close();
+    }
+  </script>
+
+  <script type="module" src="js/telegram.js"></script>
+</body>
+</html>

@@ -34,7 +34,9 @@
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || '';
     const isAtivado = urlParams.get('ativado') === 'true';
-    const hubUsername = urlParams.get('hubUsername') || 'ConnectHubBot';
+    
+    // Atualizado para usar o username dinâmico passado pela URL ou ConnectHubSpoke_bot como fallback
+    const hubUsername = urlParams.get('hubUsername') || 'ConnectHubSpoke_bot';
 
     if (isAtivado) {
       document.getElementById('divAtivar').style.display = 'none';
@@ -42,7 +44,8 @@
     }
 
     function ativar() {
-      const targetUrl = `https://t.me/NotificaMedBot?start=${encodeURIComponent(token)}`;
+      // ✅ CORRIGIDO: Redireciona para o bot correto (ConnectHubSpoke_bot) usando hubUsername em vez de NotificaMedBot
+      const targetUrl = `https://t.me/${hubUsername}?start=${encodeURIComponent(token)}`;
       if (tg && tg.openTelegramLink) {
         tg.openTelegramLink(targetUrl);
       } else {

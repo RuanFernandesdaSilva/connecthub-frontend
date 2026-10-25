@@ -49,12 +49,15 @@ async function inicializarTelaTelegram() {
   const usuarioLocal = JSON.parse(localStorage.getItem('usuario') || '{}');
   const urlParams = new URLSearchParams(window.location.search);
 
-  const userId = urlParams.get('id') || usuarioLocal.id || localStorage.getItem('userId');
+  const rawUserId = urlParams.get('id') || usuarioLocal.id || localStorage.getItem('userId');
   const userTipo = (urlParams.get('tipo') || usuarioLocal.tipo || localStorage.getItem('userTipo') || '')
     .toUpperCase()
     .replace('ROLE_', '');
 
-  if (!userId || !userTipo) {
+  // Validação estrita para impedir valores nulos ou a string "undefined"
+  const isValidId = rawUserId && rawUserId !== 'undefined' && rawUserId !== 'null' && !isNaN(rawUserId);
+
+  if (!isValidId || !userTipo) {
     if (statusContainer) {
       statusContainer.style.backgroundColor = '#fde8e8';
       statusContainer.style.color = '#e53e3e';
@@ -65,7 +68,7 @@ async function inicializarTelaTelegram() {
   }
 
   usuarioLogado = {
-    id: parseInt(userId, 10),
+    id: parseInt(rawUserId, 10),
     tipo: userTipo,
     nome: usuarioLocal.nome || localStorage.getItem('userNome') || 'Usuário'
   };
@@ -91,9 +94,15 @@ async function inicializarTelaTelegram() {
   iniciarPollingStatus(usuarioLogado.id, usuarioLogado.tipo);
 }
 
-// 2. POLLING A CADA 2.5s CONSULTANDO O BACKEND
+// 2. POLLING A CADA 2.5s CONSULTANDO O BACKEND (CORRIGIDO)
 function iniciarPollingStatus(userId, userTipo) {
   pararPolling();
+
+  // Trava de segurança extra para evitar chamadas com ID inválido
+  if (!userId || userId === 'undefined' || userId === 'null' || isNaN(userId)) {
+    console.warn('Id de usuário inválido omitido no polling.');
+    return;
+  }
 
   intervalPollingId = setInterval(async () => {
     try {

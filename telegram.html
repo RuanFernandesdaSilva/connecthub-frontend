@@ -12,11 +12,13 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/telegram.css">
 
-  <!-- PROTEÇÃO DE ROTA AUTOMÁTICA -->
+  <!-- PROTEÇÃO DE ROTA AUTOMÁTICA (CORRIGIDA) -->
   <script>
     (function verificarConexaoExistente() {
       const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
-      if (usuario.id && usuario.telegramConectado) {
+      const validId = usuario.id && usuario.id !== 'undefined' && usuario.id !== 'null';
+      
+      if (validId && usuario.telegramConectado) {
         const destino = usuario.tipo === 'IDOSO' ? 'home-idoso.html' : 'home-familiar.html';
         window.location.href = `${destino}?id=${usuario.id}&tipo=${usuario.tipo}`;
       }

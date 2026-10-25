@@ -27,7 +27,7 @@ function fecharEFinalizarWebApp() {
 }
 
 /**
- * Lê e consolida a sessão local (idêntico ao mecanismo do idoso)
+ * Lê e consolida a sessão local
  */
 function carregarSessaoLocal() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -36,12 +36,12 @@ function carregarSessaoLocal() {
 
   const idSalvo = localStorage.getItem('userId');
 
-  if (idUrl && idSalvo && idUrl !== idSalvo) {
+  if (idUrl && idSalvo && idUrl !== idSalvo && idUrl !== 'undefined') {
     console.warn('Novo usuário detectado na URL! Limpando cache anterior...');
     localStorage.clear();
   }
 
-  if (idUrl) {
+  if (idUrl && idUrl !== 'undefined' && idUrl !== 'null' && !isNaN(idUrl)) {
     usuarioLogado = {
       id: parseInt(idUrl, 10),
       nome: localStorage.getItem('userNome') || 'Familiar',
@@ -60,7 +60,10 @@ function carregarSessaoLocal() {
   const usuarioSalvo = localStorage.getItem('usuario');
   if (usuarioSalvo) {
     try {
-      usuarioLogado = JSON.parse(usuarioSalvo);
+      const parsed = JSON.parse(usuarioSalvo);
+      if (parsed && parsed.id && parsed.id !== 'undefined' && !isNaN(parsed.id)) {
+        usuarioLogado = parsed;
+      }
     } catch (e) {
       usuarioLogado = null;
     }
@@ -72,7 +75,7 @@ function carregarSessaoLocal() {
     const fotoSolf = localStorage.getItem('userFoto');
     const tipoSolf = localStorage.getItem('userTipo');
 
-    if (idSolf) {
+    if (idSolf && idSolf !== 'undefined' && idSolf !== 'null' && !isNaN(idSolf)) {
       usuarioLogado = {
         id: parseInt(idSolf, 10),
         nome: nomeSolf || 'Familiar',
@@ -92,7 +95,7 @@ async function inicializarHomeFamiliar() {
 
   carregarSessaoLocal();
 
-  if (!usuarioLogado || !usuarioLogado.id) {
+  if (!usuarioLogado || !usuarioLogado.id || isNaN(usuarioLogado.id)) {
     try {
       const response = await fetch(API_AUTH_URL, {
         method: 'GET',
@@ -102,7 +105,7 @@ async function inicializarHomeFamiliar() {
       if (response.ok) {
         try {
           const dadosApi = await response.json();
-          if (dadosApi && dadosApi.id) {
+          if (dadosApi && dadosApi.id && !isNaN(dadosApi.id)) {
             usuarioLogado = {
               ...dadosApi,
               fotoUrl: dadosApi.fotoUrl || dadosApi.imagemUrl || localStorage.getItem('userFoto')
@@ -112,7 +115,7 @@ async function inicializarHomeFamiliar() {
           console.warn('Falha ao converter JSON da sessão');
         }
 
-        if (usuarioLogado && usuarioLogado.id) {
+        if (usuarioLogado && usuarioLogado.id && !isNaN(usuarioLogado.id)) {
           localStorage.setItem('userId', usuarioLogado.id);
           localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
           if (usuarioLogado.fotoUrl) {
@@ -125,7 +128,7 @@ async function inicializarHomeFamiliar() {
     }
   }
 
-  if (!usuarioLogado || !usuarioLogado.id) {
+  if (!usuarioLogado || !usuarioLogado.id || isNaN(usuarioLogado.id)) {
     redirecionarParaLogin();
     return;
   }
@@ -136,8 +139,8 @@ async function inicializarHomeFamiliar() {
   // Renderização inicial através do cache local
   renderizarPerfil();
 
-  // Consulta o Spring Boot para recuperar a foto do banco caso o localStorage tenha sido limpo no logout
-  if (usuarioLogado && usuarioLogado.id) {
+  // Consulta o Spring Boot para recuperar a foto do banco caso o localStorage tenha sido limpo
+  if (usuarioLogado && usuarioLogado.id && !isNaN(usuarioLogado.id)) {
     try {
       const res = await fetch(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
         method: 'GET',
@@ -158,7 +161,6 @@ async function inicializarHomeFamiliar() {
           localStorage.setItem('userFoto', fotoAtualizada);
           if (dadosPerfil.nome) localStorage.setItem('userNome', dadosPerfil.nome);
 
-          // Atualiza o DOM imediatamente após recuperar do servidor
           renderizarPerfil();
         }
       }
@@ -170,7 +172,7 @@ async function inicializarHomeFamiliar() {
   await carregarIdososVinculados(usuarioLogado.id);
 }
 
-// 2. RENDERIZAÇÃO DO PERFIL DO FAMILIAR (Idêntico ao Idoso)
+// 2. RENDERIZAÇÃO DO PERFIL DO FAMILIAR
 function renderizarPerfil() {
   if (!usuarioLogado) return;
 
@@ -190,10 +192,16 @@ function renderizarPerfil() {
   if (avatarElem) avatarElem.src = foto;
 }
 
-// 3. CARREGAR IDOSOS VINCULADOS
+// 3. CARREGAR IDOSOS VINCULADOS (CORRIGIDO PARA EVITAR ID UNDEFINED)
 async function carregarIdososVinculados(idFamiliar) {
   const container = document.getElementById('listaIdososVinculados');
   if (!container) return;
+
+  if (!idFamiliar || idFamiliar === 'undefined' || idFamiliar === 'null' || isNaN(idFamiliar)) {
+    console.warn('Nenhum ID de familiar válido fornecido para buscar vínculos.');
+    container.innerHTML = '<p style="color: #666;">Nenhum idoso vinculado ainda.</p>';
+    return;
+  }
 
   const AVATAR_IDOSO_PADRAO = 'https://ui-avatars.com/api/?name=Idoso&background=cbd5e0&color=fff';
 
@@ -394,9 +402,11 @@ function mostrarAvisoEmBreve(modulo) {
 }
 
 function navegarPara(pagina) {
-  const userId = usuarioLogado?.id || localStorage.getItem('userId');
-  if (userId) {
-    window.location.href = `${pagina}?idFamiliar=${userId}`;
+  const rawId = usuarioLogado?.id || localStorage.getItem('userId');
+  const isValidId = rawId && rawId !== 'undefined' && rawId !== 'null' && !isNaN(rawId);
+
+  if (isValidId) {
+    window.location.href = `${pagina}?idFamiliar=${rawId}`;
   } else {
     window.location.href = pagina;
   }
@@ -439,7 +449,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Exposição de funções para chamadas inline no HTML
 window.carregarIdososVinculados = carregarIdososVinculados;
 window.abrirModalVinculo = abrirModalVinculo;
 window.fecharModalVinculo = fecharModalVinculo;

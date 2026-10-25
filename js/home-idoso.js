@@ -29,12 +29,12 @@ function carregarSessaoLocal() {
 
   const idSalvo = localStorage.getItem('userId');
 
-  if (idUrl && idSalvo && idUrl !== idSalvo) {
+  if (idUrl && idSalvo && idUrl !== idSalvo && idUrl !== 'undefined') {
     console.warn('Novo usuário detectado na URL! Limpando cache anterior...');
     limparSessaoManterFotos();
   }
 
-  if (idUrl) {
+  if (idUrl && idUrl !== 'undefined' && idUrl !== 'null' && !isNaN(idUrl)) {
     usuarioLogado = {
       id: parseInt(idUrl, 10),
       nome: localStorage.getItem('userNome') || 'Idoso',
@@ -53,7 +53,10 @@ function carregarSessaoLocal() {
   const usuarioSalvo = localStorage.getItem('usuario');
   if (usuarioSalvo) {
     try {
-      usuarioLogado = JSON.parse(usuarioSalvo);
+      const parsed = JSON.parse(usuarioSalvo);
+      if (parsed && parsed.id && parsed.id !== 'undefined' && !isNaN(parsed.id)) {
+        usuarioLogado = parsed;
+      }
     } catch (e) {
       usuarioLogado = null;
     }
@@ -65,7 +68,7 @@ function carregarSessaoLocal() {
     const fotoSolf = localStorage.getItem(`user_foto_${idSolf}`) || localStorage.getItem('userFoto');
     const tipoSolf = localStorage.getItem('userTipo');
 
-    if (idSolf) {
+    if (idSolf && idSolf !== 'undefined' && idSolf !== 'null' && !isNaN(idSolf)) {
       usuarioLogado = {
         id: parseInt(idSolf, 10),
         nome: nomeSolf || 'Idoso',
@@ -95,7 +98,7 @@ async function inicializarHomeIdoso() {
 
   carregarSessaoLocal();
 
-  if (!usuarioLogado || !usuarioLogado.id) {
+  if (!usuarioLogado || !usuarioLogado.id || isNaN(usuarioLogado.id)) {
     try {
       const response = await fetch(API_AUTH_URL, {
         method: 'GET',
@@ -105,7 +108,7 @@ async function inicializarHomeIdoso() {
       if (response.ok) {
         try {
           const dadosApi = await response.json();
-          if (dadosApi && dadosApi.id) {
+          if (dadosApi && dadosApi.id && !isNaN(dadosApi.id)) {
             const fotoSalvaLocal = localStorage.getItem(`user_foto_${dadosApi.id}`);
             usuarioLogado = {
               ...dadosApi,
@@ -117,7 +120,7 @@ async function inicializarHomeIdoso() {
           usuarioLogado = parseSessaoTexto(textoSessao);
         }
 
-        if (usuarioLogado && usuarioLogado.id) {
+        if (usuarioLogado && usuarioLogado.id && !isNaN(usuarioLogado.id)) {
           localStorage.setItem('userId', usuarioLogado.id);
           localStorage.setItem('usuario', JSON.stringify(usuarioLogado));
           if (usuarioLogado.fotoUrl) {
@@ -131,14 +134,14 @@ async function inicializarHomeIdoso() {
     }
   }
 
-  if (!usuarioLogado || !usuarioLogado.id) {
+  if (!usuarioLogado || !usuarioLogado.id || isNaN(usuarioLogado.id)) {
     redirecionarParaLogin();
     return;
   }
 
   renderizarPerfil();
 
-  if (usuarioLogado && usuarioLogado.id) {
+  if (usuarioLogado && usuarioLogado.id && !isNaN(usuarioLogado.id)) {
     try {
       const res = await fetch(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
         method: 'GET',
@@ -193,9 +196,16 @@ function renderizarPerfil() {
   if (avatarElem) avatarElem.src = foto;
 }
 
+// CARREGAR FAMILIARES VINCULADOS (CORRIGIDO PARA EVITAR ID UNDEFINED)
 async function carregarFamiliaresVinculados(idosoId) {
   const container = document.getElementById('listaFamiliaresVinculados');
   if (!container) return;
+
+  if (!idosoId || idosoId === 'undefined' || idosoId === 'null' || isNaN(idosoId)) {
+    console.warn('Nenhum ID de idoso válido fornecido para buscar vínculos de familiares.');
+    container.innerHTML = '<p style="color: #777;">Nenhum familiar vinculado ainda.</p>';
+    return;
+  }
 
   const AVATAR_PADRAO = 'https://ui-avatars.com/api/?name=Familiar&background=cbd5e0&color=fff';
 
@@ -263,11 +273,11 @@ async function carregarFamiliaresVinculados(idosoId) {
 function irParaQRCode() {
   let idDestino = null;
 
-  if (usuarioLogado && usuarioLogado.id) {
+  if (usuarioLogado && usuarioLogado.id && !isNaN(usuarioLogado.id)) {
     idDestino = usuarioLogado.id;
   } else {
     carregarSessaoLocal();
-    if (usuarioLogado && usuarioLogado.id) {
+    if (usuarioLogado && usuarioLogado.id && !isNaN(usuarioLogado.id)) {
       idDestino = usuarioLogado.id;
     }
   }
@@ -281,9 +291,11 @@ function irParaQRCode() {
 }
 
 function navegarPara(pagina) {
-  const userId = usuarioLogado?.id || localStorage.getItem('userId');
-  if (userId) {
-    window.location.href = `${pagina}?idIdoso=${userId}`;
+  const rawId = usuarioLogado?.id || localStorage.getItem('userId');
+  const isValidId = rawId && rawId !== 'undefined' && rawId !== 'null' && !isNaN(rawId);
+
+  if (isValidId) {
+    window.location.href = `${pagina}?idIdoso=${rawId}`;
   } else {
     window.location.href = pagina;
   }

@@ -45,6 +45,8 @@ async function carregarDoses() {
       }
 
       container.innerHTML = doses.map(dose => {
+        // Fallback seguro para capturar 'id' ou 'idDose'
+        const idDoseReal = dose.id || dose.idDose;
         const cor = dose.corCaixa ? dose.corCaixa.toUpperCase() : 'PADRAO';
         const horario = new Date(dose.horarioProgramado).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -58,7 +60,7 @@ async function carregarDoses() {
             <p style="color: #4a5568; font-size: 0.95rem;">
               Dose: <strong>${dose.quantidadePorDose} ${dose.unidade ? dose.unidade.toLowerCase() : ''}</strong>
             </p>
-            <button class="btn-confirmar" onclick="confirmarDose(${dose.idDose})">
+            <button class="btn-confirmar" onclick="confirmarDose(${idDoseReal})">
               ✅ Já Tomei
             </button>
           </div>
@@ -72,6 +74,12 @@ async function carregarDoses() {
 }
 
 async function confirmarDose(idDose) {
+  // Trava de validação para impedir envio caso o ID venha nulo/inválido/undefined
+  if (!idDose || idDose === 'undefined' || isNaN(idDose)) {
+    alert('Erro: ID da dose é inválido.');
+    return;
+  }
+
   try {
     const res = await fetchAutenticado(`${API_BASE_URL}/doses/${idDose}/confirmar`, {
       method: 'PUT'

@@ -138,7 +138,7 @@ async function inicializarHomeFamiliar() {
   // Renderização inicial através do cache local
   renderizarPerfil();
 
-  // Consulta o Spring Boot para recuperar a foto do banco
+  // Consulta o Spring Boot para recuperar a foto do banco caso o localStorage tenha sido limpo
   if (usuarioLogado && usuarioLogado.id && !isNaN(usuarioLogado.id)) {
     try {
       const res = await fetch(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {

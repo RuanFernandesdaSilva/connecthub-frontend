@@ -1,4 +1,3 @@
-// js/vinculo.js
 import { API_AUTH_URL, API_VINCULO_URL } from './config.js';
 
 const DEFAULT_AVATAR = 'https://via.placeholder.com/80/cbd5e0/ffffff?text=User';

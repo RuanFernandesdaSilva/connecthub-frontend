@@ -133,7 +133,7 @@ async function inicializarHomeFamiliar() {
     return;
   }
 
-  fecharScannerQrCode(true);
+  await fecharScannerQrCode(true);
 
   // Renderização inicial através do cache local
   renderizarPerfil();
@@ -262,28 +262,43 @@ async function carregarIdososVinculados(idFamiliar) {
   }
 }
 
-// 4. LEITOR DE QR CODE VIA CÂMERA (FORÇANDO CÂMERA FRONTAL)
-function iniciarLeitorQrCode() {
+// 4. LEITOR DE QR CODE VIA CÂMERA FRONTAL DIRETA
+async function iniciarLeitorQrCode() {
   const modalScanner = document.getElementById('modalScanner');
   if (modalScanner) {
     modalScanner.classList.remove('hidden');
     modalScanner.style.display = 'flex';
   }
 
-  if (html5QrCodeScanner) return;
+  if (html5QrCodeScanner) {
+    await fecharScannerQrCode(false);
+  }
 
-  if (typeof Html5QrcodeScanner !== 'undefined') {
-    html5QrCodeScanner = new Html5QrcodeScanner("qr-reader", {
-      fps: 10,
-      qrbox: { width: 220, height: 220 },
-      videoConstraints: {
-        facingMode: "user" // Força o uso da câmera frontal (frente)
-      }
-    });
+  exibirStatusScanner('Iniciando câmera frontal...', 'info');
 
-    html5QrCodeScanner.render(onScanSuccess, onScanError);
-  } else {
-    exibirStatusScanner('Biblioteca de QR Code não carregada no navegador.', 'erro');
+  try {
+    if (typeof Html5Qrcode !== 'undefined') {
+      html5QrCodeScanner = new Html5Qrcode("qr-reader");
+
+      const config = {
+        fps: 10,
+        qrbox: { width: 220, height: 220 }
+      };
+
+      await html5QrCodeScanner.start(
+        { facingMode: "user" },
+        config,
+        onScanSuccess,
+        onScanError
+      );
+
+      exibirStatusScanner('Aponte a câmera frontal para o QR Code do idoso', 'info');
+    } else {
+      exibirStatusScanner('Biblioteca de QR Code não disponível.', 'erro');
+    }
+  } catch (err) {
+    console.error('Erro ao acessar a câmera frontal:', err);
+    exibirStatusScanner('Não foi possível acessar a câmera frontal diretamente.', 'erro');
   }
 }
 
@@ -310,6 +325,10 @@ async function onScanSuccess(decodedText) {
     }
 
     exibirStatusScanner('QR Code lido com sucesso! Estabelecendo vínculo...', 'info');
+
+    if (html5QrCodeScanner) {
+      await html5QrCodeScanner.stop().catch(() => {});
+    }
 
     const response = await fetch(`${API_VINCULO_URL}/qrcode`, {
       method: 'POST',
@@ -355,7 +374,9 @@ async function fecharScannerQrCode(esconderModal = true) {
 
   if (html5QrCodeScanner) {
     try {
-      await html5QrCodeScanner.clear();
+      if (html5QrCodeScanner.isScanning) {
+        await html5QrCodeScanner.stop();
+      }
     } catch (err) {
       console.warn('Erro ao encerrar câmera:', err);
     } finally {

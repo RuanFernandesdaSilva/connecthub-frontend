@@ -262,7 +262,7 @@ async function carregarIdososVinculados(idFamiliar) {
   }
 }
 
-// 4. LEITOR DE QR CODE VIA CÂMERA FRONTAL DIRETA
+// 4. LEITOR DE QR CODE VIA CÂMERA TRASEIRA/PRINCIPAL DIRETA
 async function iniciarLeitorQrCode() {
   const modalScanner = document.getElementById('modalScanner');
   if (modalScanner) {
@@ -274,7 +274,7 @@ async function iniciarLeitorQrCode() {
     await fecharScannerQrCode(false);
   }
 
-  exibirStatusScanner('Iniciando câmera frontal...', 'info');
+  exibirStatusScanner('Iniciando câmera...', 'info');
 
   try {
     if (typeof Html5Qrcode !== 'undefined') {
@@ -285,20 +285,21 @@ async function iniciarLeitorQrCode() {
         qrbox: { width: 220, height: 220 }
       };
 
+      // Define "environment" para acionar a câmera principal/traseira diretamente
       await html5QrCodeScanner.start(
-        { facingMode: "user" },
+        { facingMode: "environment" },
         config,
         onScanSuccess,
         onScanError
       );
 
-      exibirStatusScanner('Aponte a câmera frontal para o QR Code do idoso', 'info');
+      exibirStatusScanner('Aponte a câmera para o QR Code do idoso', 'info');
     } else {
       exibirStatusScanner('Biblioteca de QR Code não disponível.', 'erro');
     }
   } catch (err) {
-    console.error('Erro ao acessar a câmera frontal:', err);
-    exibirStatusScanner('Não foi possível acessar a câmera frontal diretamente.', 'erro');
+    console.error('Erro ao acessar a câmera principal:', err);
+    exibirStatusScanner('Não foi possível acessar a câmera do dispositivo diretamente.', 'erro');
   }
 }
 

@@ -276,7 +276,9 @@ function iniciarLeitorQrCode() {
     html5QrCodeScanner = new Html5QrcodeScanner("qr-reader", {
       fps: 10,
       qrbox: { width: 220, height: 220 },
-      rememberLastUsedCamera: true
+      videoConstraints: {
+        facingMode: "environment" // Prioriza a câmera principal/traseira sem quebrar webcams
+      }
     });
 
     html5QrCodeScanner.render(onScanSuccess, onScanError);

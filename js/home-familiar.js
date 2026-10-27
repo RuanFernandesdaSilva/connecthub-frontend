@@ -133,13 +133,12 @@ async function inicializarHomeFamiliar() {
     return;
   }
 
-  fecharModalVinculo();
   fecharScannerQrCode(true);
 
   // Renderização inicial através do cache local
   renderizarPerfil();
 
-  // Consulta o Spring Boot para recuperar a foto do banco caso o localStorage tenha sido limpo
+  // Consulta o Spring Boot para recuperar a foto do banco
   if (usuarioLogado && usuarioLogado.id && !isNaN(usuarioLogado.id)) {
     try {
       const res = await fetch(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
@@ -192,7 +191,7 @@ function renderizarPerfil() {
   if (avatarElem) avatarElem.src = foto;
 }
 
-// 3. CARREGAR IDOSOS VINCULADOS (CORRIGIDO PARA EVITAR ID UNDEFINED)
+// 3. CARREGAR IDOSOS VINCULADOS
 async function carregarIdososVinculados(idFamiliar) {
   const container = document.getElementById('listaIdososVinculados');
   if (!container) return;
@@ -263,32 +262,8 @@ async function carregarIdososVinculados(idFamiliar) {
   }
 }
 
-// 4. MODAL DE OPÇÕES DE VÍNCULO
-function abrirModalVinculo() {
-  const modal = document.getElementById('modalOpcoesVinculo');
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-  }
-}
-
-function fecharModalVinculo() {
-  const modal = document.getElementById('modalOpcoesVinculo');
-  if (modal) {
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-  }
-}
-
-function redirecionarVinculo(tipo) {
-  fecharModalVinculo();
-  window.location.href = `vinculo.html?aba=${tipo}`;
-}
-
-// 5. LEITOR DE QR CODE
+// 4. LEITOR DE QR CODE VIA CÂMERA
 function iniciarLeitorQrCode() {
-  fecharModalVinculo();
-
   const modalScanner = document.getElementById('modalScanner');
   if (modalScanner) {
     modalScanner.classList.remove('hidden');
@@ -396,7 +371,7 @@ function exibirStatusScanner(texto, tipo) {
   }
 }
 
-// 6. NAVEGAÇÃO E LOGOUT
+// 5. NAVEGAÇÃO E LOGOUT
 function mostrarAvisoEmBreve(modulo) {
   alert(`O módulo de ${modulo} estará disponível em breve!`);
 }
@@ -450,9 +425,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 window.carregarIdososVinculados = carregarIdososVinculados;
-window.abrirModalVinculo = abrirModalVinculo;
-window.fecharModalVinculo = fecharModalVinculo;
-window.redirecionarVinculo = redirecionarVinculo;
 window.iniciarLeitorQrCode = iniciarLeitorQrCode;
 window.fecharScannerQrCode = fecharScannerQrCode;
 window.mostrarAvisoEmBreve = mostrarAvisoEmBreve;

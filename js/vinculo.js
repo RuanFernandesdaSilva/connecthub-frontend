@@ -40,7 +40,6 @@ function alternarAba(nomeAba, evt) {
     targetEvent.currentTarget.classList.add('active');
   }
 
-  if (nomeAba === 'pendentes-idoso') carregarPedidosPendentes();
   if (nomeAba === 'familiares-idoso') carregarFamiliaresAceitos();
   if (nomeAba === 'idosos-familiar') carregarIdososAceitos();
   if (nomeAba === 'qrcode-idoso') gerarQrCodeIdoso();
@@ -92,7 +91,7 @@ async function inicializarTela() {
     if (isIdoso) {
       if (painelIdoso) painelIdoso.classList.remove('hidden');
       if (painelFamiliar) painelFamiliar.classList.add('hidden');
-      carregarPedidosPendentes();
+      gerarQrCodeIdoso();
       carregarFamiliaresAceitos();
     } else {
       if (painelFamiliar) painelFamiliar.classList.remove('hidden');
@@ -114,74 +113,6 @@ function exibirSessaoInvalida() {
 }
 
 // 2. FUNÇÕES DO IDOSO
-
-async function carregarPedidosPendentes() {
-  if (!usuarioLogado || !usuarioLogado.id) return;
-  const container = document.getElementById('listaPendentes');
-  if (!container) return;
-
-  try {
-    const response = await fetch(`${API_VINCULO_URL}/idoso/${usuarioLogado.id}/pendentes`, {
-      method: 'GET',
-      credentials: 'include'
-    });
-
-    if (!response.ok) return;
-
-    const pendentes = await response.json();
-    const badge = document.getElementById('badgePendentes');
-    if (badge) badge.textContent = pendentes.length;
-
-    container.innerHTML = '';
-
-    if (!pendentes || pendentes.length === 0) {
-      container.innerHTML = '<p class="empty-msg">Nenhuma solicitação de vínculo pendente.</p>';
-      return;
-    }
-
-    pendentes.forEach(p => {
-      const img = p.fotoFamiliarUrl || p.fotoUrl || DEFAULT_AVATAR;
-      container.innerHTML += `
-        <div class="user-card">
-          <img src="${img}" alt="Foto">
-          <div class="user-info">
-            <h4>${p.nomeFamiliar}</h4>
-            <p>${p.emailFamiliar}</p>
-            <small>Solicitado em: ${p.dataSolicitacao ? new Date(p.dataSolicitacao).toLocaleDateString('pt-BR') : 'N/A'}</small>
-          </div>
-          <div class="card-actions">
-            <button class="btn btn-sucesso" onclick="responderSolicitacao(${p.idVinculo}, true)">Aceitar</button>
-            <button class="btn btn-perigo" onclick="responderSolicitacao(${p.idVinculo}, false)">Recusar</button>
-          </div>
-        </div>
-      `;
-    });
-  } catch (error) {
-    console.error('Erro ao carregar solicitações pendentes:', error);
-  }
-}
-
-async function responderSolicitacao(vinculoId, aceito) {
-  hideMessage();
-  try {
-    const response = await fetch(`${API_VINCULO_URL}/responder`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ vinculoId, aceito })
-    });
-
-    const msg = await response.text();
-    showMessage(msg, response.ok);
-
-    if (response.ok) {
-      carregarPedidosPendentes();
-      carregarFamiliaresAceitos();
-    }
-  } catch (error) {
-    showMessage('Erro ao responder à solicitação.', false);
-  }
-}
 
 async function carregarFamiliaresAceitos() {
   if (!usuarioLogado || !usuarioLogado.id) return;
@@ -224,37 +155,6 @@ function gerarQrCodeIdoso() {
 
 document.addEventListener('DOMContentLoaded', () => {
   inicializarTela();
-
-  document.getElementById('formSolicitarVinculo')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    hideMessage();
-
-    if (!usuarioLogado) {
-      showMessage('Usuário não autenticado.', false);
-      return;
-    }
-
-    const idFamiliar = usuarioLogado.id;
-    const idIdoso = parseInt(document.getElementById('inputIdosoId')?.value, 10);
-
-    try {
-      const response = await fetch(`${API_VINCULO_URL}/solicitar-json`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ idFamiliar, idIdoso })
-      });
-
-      const msg = await response.text();
-      showMessage(msg, response.ok);
-
-      if (response.ok) {
-        document.getElementById('formSolicitarVinculo').reset();
-      }
-    } catch (error) {
-      showMessage('Erro ao solicitar vínculo.', false);
-    }
-  });
 
   document.getElementById('formQrCodeFamiliar')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -336,4 +236,3 @@ function renderizarUsuarios(lista, container, mensagemVazia) {
 
 // Exposição global das funções chamadas por manipuladores de evento no HTML
 window.alternarAba = alternarAba;
-window.responderSolicitacao = responderSolicitacao;

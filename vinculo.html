@@ -13,7 +13,7 @@
   <div class="container">
     <header>
       <h1>Gestão de Vínculos Familiares</h1>
-      <p class="subtitle">Conecte perfis de Familiares e Idosos para acompanhamento unificado.</p>
+      <p class="subtitle">Conecte perfis de Familiares e Idosos via QR Code instantâneo.</p>
     </header>
 
     <!-- Status da Sessão Autenticada -->
@@ -27,18 +27,16 @@
     <!-- PAINEL EXCLUSIVO DO IDOSO -->
     <div id="painelIdoso" class="hidden">
       <nav class="tabs">
-        <button class="tab-btn active" onclick="alternarAba('pendentes-idoso')">
-          Solicitações Pendentes <span id="badgePendentes" class="badge">0</span>
-        </button>
+        <button class="tab-btn active" onclick="alternarAba('qrcode-idoso')">Meu QR Code</button>
         <button class="tab-btn" onclick="alternarAba('familiares-idoso')">Meus Familiares</button>
-        <button class="tab-btn" onclick="alternarAba('qrcode-idoso')">Meu QR Code</button>
       </nav>
 
       <main>
-        <section id="aba-pendentes-idoso" class="tab-content active">
-          <h3>Solicitações Recebidas Pendentes</h3>
-          <div id="listaPendentes" class="cards-grid">
-            <p class="empty-msg">Buscando pendências...</p>
+        <section id="aba-qrcode-idoso" class="tab-content active">
+          <div class="card text-center">
+            <h3>QR Code para Vinculação Rápida</h3>
+            <p class="subtitle">Apresente este código para o familiar escanear e vincular instantaneamente.</p>
+            <div id="qrcodeContainerIdoso" class="qrcode-wrapper"></div>
           </div>
         </section>
 
@@ -48,49 +46,28 @@
             <p class="empty-msg">Buscando familiares...</p>
           </div>
         </section>
-
-        <section id="aba-qrcode-idoso" class="tab-content">
-          <div class="card text-center">
-            <h3>QR Code para Vinculação Rápida</h3>
-            <p class="subtitle">Apresente este código para o familiar escanear e vincular instantaneamente.</p>
-            <div id="qrcodeContainerIdoso" class="qrcode-wrapper"></div>
-          </div>
-        </section>
       </main>
     </div>
 
     <!-- PAINEL EXCLUSIVO DO FAMILIAR -->
     <div id="painelFamiliar" class="hidden">
       <nav class="tabs">
-        <button class="tab-btn active" onclick="alternarAba('solicitar-familiar')">Solicitar Vínculo</button>
+        <button class="tab-btn active" onclick="alternarAba('qrcode-familiar')">Vincular por QR Code</button>
         <button class="tab-btn" onclick="alternarAba('idosos-familiar')">Meus Idosos</button>
       </nav>
 
       <main>
-        <section id="aba-solicitar-familiar" class="tab-content active">
-          <div class="grid-2">
-            <div class="card">
-              <h3>Solicitar por ID</h3>
-              <form id="formSolicitarVinculo">
-                <div class="input-group">
-                  <label for="inputIdosoId">ID do Idoso:</label>
-                  <input type="number" id="inputIdosoId" required placeholder="Informe o ID do Idoso">
-                </div>
-                <button type="submit" class="btn btn-primary">Enviar Solicitação</button>
-              </form>
-            </div>
-
-            <div class="card text-center">
-              <h3>Ativação Direta por QR Code</h3>
-              <p class="subtitle">Insira os dados do QR Code do idoso para vínculo automático sem pendência.</p>
-              <form id="formQrCodeFamiliar">
-                <div class="input-group">
-                  <label for="inputIdosoQr">ID do Idoso via QR Code:</label>
-                  <input type="number" id="inputIdosoQr" required placeholder="ID Lido do QR Code">
-                </div>
-                <button type="submit" class="btn btn-sucesso">Vincular Instantaneamente</button>
-              </form>
-            </div>
+        <section id="aba-qrcode-familiar" class="tab-content active">
+          <div class="card text-center">
+            <h3>Ativação Direta por QR Code</h3>
+            <p class="subtitle">Insira o ID contido no QR Code do idoso para realizar o vínculo automático e instantâneo.</p>
+            <form id="formQrCodeFamiliar">
+              <div class="input-group">
+                <label for="inputIdosoQr">ID do Idoso via QR Code:</label>
+                <input type="number" id="inputIdosoQr" required placeholder="Informe o ID do Idoso">
+              </div>
+              <button type="submit" class="btn btn-sucesso">Vincular Instantaneamente</button>
+            </form>
           </div>
         </section>
 
@@ -113,4 +90,3 @@
   <script type="module" src="js/vinculo.js"></script>
 </body>
 </html>
-

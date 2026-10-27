@@ -25,7 +25,6 @@
         <span class="user-role-badge">Familiar</span>
       </div>
 
-      <!-- BOTÃO DE SAIR APENAS COM ÍCONE SVG (Sem onclick duplo) -->
       <button type="button" id="btnLogout" class="btn btn-logout" title="Sair da conta" aria-label="Sair">
         <svg class="logout-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
           <path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h7v2H5v14h7v2zm11-4l-1.375-1.45l2.55-2.55H9v-2h8.175l-2.55-2.55L16 7l5 5z"></path>
@@ -51,11 +50,11 @@
 
       <div class="dashboard-grid">
 
-        <!-- Vínculo (Ativo) -->
-        <div class="dash-card" onclick="abrirModalVinculo()">
+        <!-- Vínculo (Ativo - Redireciona direto para a gestão de vínculos por QR Code) -->
+        <div class="dash-card" onclick="navegarPara('vinculo.html')">
           <div class="dash-icon">🔗</div>
           <h4>Vínculo</h4>
-          <p>Gerencie conexões com idosos por pedido ou QR Code.</p>
+          <p>Gerencie conexões instantâneas com idosos via QR Code.</p>
         </div>
 
         <!-- Configurações (Ativo) -->
@@ -96,32 +95,6 @@
       </div>
     </main>
 
-  </div>
-
-  <!-- MODAL DE SELEÇÃO DE VÍNCULO -->
-  <div id="modalOpcoesVinculo" class="modal-overlay hidden">
-    <div class="modal-card">
-      <h3>Como deseja vincular um idoso?</h3>
-      <p class="subtitle">Escolha a opção de sua preferência:</p>
-
-      <div class="opcoes-grid">
-        <!-- Opção 1: Enviar Pedido por ID -->
-        <div class="opcao-card" onclick="redirecionarVinculo('pedido')">
-          <div class="icon">✉️</div>
-          <h4>Vínculo por Pedido</h4>
-          <p>Informe o ID do idoso e envie uma solicitação para ele aprovar.</p>
-        </div>
-
-        <!-- Opção 2: QR Code via Câmera -->
-        <div class="opcao-card" onclick="iniciarLeitorQrCode()">
-          <div class="icon">📷</div>
-          <h4>Escanear QR Code</h4>
-          <p>Abra a câmera do dispositivo para ler o QR Code do idoso.</p>
-        </div>
-      </div>
-
-      <button class="btn btn-secondary btn-fechar" onclick="fecharModalVinculo()">Cancelar</button>
-    </div>
   </div>
 
   <!-- MODAL DO SCANNER DA CÂMERA -->

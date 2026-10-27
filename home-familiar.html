@@ -51,11 +51,11 @@
 
       <div class="dashboard-grid">
 
-        <!-- Vínculo (Ativo - Redireciona diretamente para a tela de Vínculo por QR Code) -->
-        <div class="dash-card" onclick="navegarPara('vinculo.html')">
-          <div class="dash-icon">🔗</div>
-          <h4>Vínculo</h4>
-          <p>Gerencie conexões instantâneas com idosos via QR Code.</p>
+        <!-- Escanear QR Code (Abra direto a câmera para scanner ao clicar) -->
+        <div class="dash-card" onclick="iniciarLeitorQrCode()">
+          <div class="dash-icon">📷</div>
+          <h4>Escanear QR Code</h4>
+          <p>Aponte a câmera para o QR Code do idoso para vincular instantaneamente.</p>
         </div>
 
         <!-- Configurações (Ativo) -->
@@ -98,7 +98,7 @@
 
   </div>
 
-  <!-- MODAL DO SCANNER DA CÂMERA (Mantido para leitura via câmera quando necessário) -->
+  <!-- MODAL DO SCANNER DA CÂMERA -->
   <div id="modalScanner" class="modal-overlay hidden">
     <div class="modal-card" style="max-width: 500px; width: 90%; text-align: center;">
       <h3>Escanear QR Code do Idoso</h3>

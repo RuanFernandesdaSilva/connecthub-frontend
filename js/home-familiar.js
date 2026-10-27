@@ -262,7 +262,7 @@ async function carregarIdososVinculados(idFamiliar) {
   }
 }
 
-// 4. LEITOR DE QR CODE VIA CÂMERA
+// 4. LEITOR DE QR CODE VIA CÂMERA (FORÇANDO CÂMERA FRONTAL)
 function iniciarLeitorQrCode() {
   const modalScanner = document.getElementById('modalScanner');
   if (modalScanner) {
@@ -277,7 +277,7 @@ function iniciarLeitorQrCode() {
       fps: 10,
       qrbox: { width: 220, height: 220 },
       videoConstraints: {
-        facingMode: "environment" // Prioriza a câmera principal/traseira sem quebrar webcams
+        facingMode: "user" // Força o uso da câmera frontal (frente)
       }
     });
 

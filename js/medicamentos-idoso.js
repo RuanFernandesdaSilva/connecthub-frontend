@@ -5,15 +5,15 @@ let intervalTimer = null;
 let dosesLista = [];
 
 const MAPA_CORES = {
-  'VERMELHO': '#e53e3e', 'RED': '#e53e3e',
-  'AZUL': '#0083a0', 'BLUE': '#0083a0',
-  'AMARELO': '#f6e05e', 'YELLOW': '#f6e05e',
-  'VERDE': '#38a169', 'GREEN': '#38a169',
-  'ROXO': '#b76eeb', 'PURPLE': '#b76eeb',
-  'LARANJA': '#dd6b20', 'ORANGE': '#dd6b20',
-  'CIANO': '#38bdf8', 'CYAN': '#38bdf8',
-  'MARROM': '#744210', 'BROWN': '#744210',
-  'CINZA': '#718096', 'GREY': '#718096'
+  'VERMELHO': '#ff3b30', 'RED': '#ff3b30',
+  'AZUL': '#0093b2', 'BLUE': '#0093b2',
+  'AMARELO': '#ffdc52', 'YELLOW': '#ffdc52',
+  'VERDE': '#00be63', 'GREEN': '#00be63',
+  'ROXO': '#d175f0', 'PURPLE': '#d175f0',
+  'LARANJA': '#ff7315', 'ORANGE': '#ff7315',
+  'CIANO': '#3ee2eb', 'CYAN': '#3ee2eb',
+  'MARROM': '#7a4300', 'BROWN': '#7a4300',
+  'CINZA': '#929292', 'GREY': '#929292'
 };
 
 async function fetchAutenticado(url, options = {}) {
@@ -32,14 +32,17 @@ function inicializar() {
     try {
       const user = JSON.parse(usuarioRaw);
       idosoId = user.id;
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Falha ao ler objeto usuario do localStorage', e);
+    }
   }
 
-  if (!idosoId) {
+  if (!idosoId || idosoId === 'undefined') {
     idosoId = localStorage.getItem('userId');
   }
 
-  if (!idosoId) {
+  if (!idosoId || idosoId === 'undefined') {
+    console.error('ID do idoso não encontrado na sessão.');
     window.location.href = 'index.html';
     return;
   }
@@ -48,28 +51,50 @@ function inicializar() {
 }
 
 async function carregarDoses() {
-  const container = document.getElementById('listaDoses');
+  const containerDoses = document.getElementById('listaDoses');
+  const gridGavetas = document.getElementById('gridGavetas');
+
   try {
     const res = await fetchAutenticado(`${API_BASE_URL}/doses/idoso/${idosoId}`);
+    
     if (res.ok) {
       dosesLista = await res.json();
+      
       if (!Array.isArray(dosesLista) || dosesLista.length === 0) {
-        container.innerHTML = '<div class="card"><p style="color: #4a5568; text-align: center;">🎉 Nenhuma dose pendente no momento!</p></div>';
-        document.getElementById('gerenciadorTempo').style.display = 'none';
-        renderizarGavetas([]);
+        if (containerDoses) {
+          containerDoses.innerHTML = '<div class="card"><p style="color: #4a5568; text-align: center;">🎉 Nenhuma dose pendente no momento!</p></div>';
+        }
+        if (gridGavetas) {
+          gridGavetas.innerHTML = '<p style="color: #718096; grid-column: span 3; text-align: center;">Nenhuma gaveta cadastrada.</p>';
+        }
+        const bannerTempo = document.getElementById('gerenciadorTempo');
+        if (bannerTempo) bannerTempo.style.display = 'none';
         return;
       }
 
-      // Ordena cronologicamente do horário mais próximo para o mais distante
+      // Ordena cronologicamente por horário
       dosesLista.sort((a, b) => new Date(a.horarioProgramado) - new Date(b.horarioProgramado));
 
       renderizarGavetas(dosesLista);
       renderizarCardsDoses();
       iniciarContagemRegressiva();
+    } else {
+      console.error(`Erro na API (${res.status}):`, await res.text());
+      if (containerDoses) {
+        containerDoses.innerHTML = `<p style="color: #e53e3e; text-align: center;">Não foi possível carregar suas doses. (Erro ${res.status})</p>`;
+      }
+      if (gridGavetas) {
+        gridGavetas.innerHTML = '<p style="color: #e53e3e; grid-column: span 3; text-align: center;">Erro nos dados das gavetas.</p>';
+      }
     }
   } catch (err) {
-    console.error('Erro ao carregar doses:', err);
-    container.innerHTML = '<p style="color: #e53e3e; text-align: center;">Erro ao buscar informações das doses.</p>';
+    console.error('Erro de conexão ao carregar doses:', err);
+    if (containerDoses) {
+      containerDoses.innerHTML = '<p style="color: #e53e3e; text-align: center;">Erro de conexão com o servidor.</p>';
+    }
+    if (gridGavetas) {
+      gridGavetas.innerHTML = '<p style="color: #e53e3e; grid-column: span 3; text-align: center;">Erro de conexão.</p>';
+    }
   }
 }
 
@@ -77,27 +102,30 @@ function renderizarGavetas(doses) {
   const grid = document.getElementById('gridGavetas');
   if (!grid) return;
 
-  if (doses.length === 0) {
+  if (!Array.isArray(doses) || doses.length === 0) {
     grid.innerHTML = '<p style="color: #718096; grid-column: span 3; text-align: center;">Nenhuma gaveta em uso.</p>';
     return;
   }
 
-  // Filtra gavetas únicas agrupadas por cor + letra/identificador
   const gavetasUnicas = {};
   doses.forEach(d => {
-    const cor = d.corCaixa ? d.corCaixa.toUpperCase() : 'CINZA';
-    const letra = d.identificadorCaixa || '?';
+    // Mapeamento seguro das propriedades vindas do backend DTO
+    const cor = (d.corCaixa || d.cor || 'CINZA').toUpperCase();
+    const letra = (d.identificadorCaixa || d.identificador || d.letra || '?').toUpperCase();
     const chave = `${cor}_${letra}`;
+
     if (!gavetasUnicas[chave]) {
-      gavetasUnicas[chave] = { cor, letra, medicamento: d.nomeMedicamento };
+      gavetasUnicas[chave] = { 
+        cor, 
+        letra, 
+        medicamento: d.nomeMedicamento || d.medicamentoNome || 'Medicamento' 
+      };
     }
   });
 
   grid.innerHTML = Object.values(gavetasUnicas).map(g => {
-    const hexCor = MAPA_CORES[g.cor] || '#718096';
-    const corTexto = (g.cor === 'AMARELO' || g.cor === 'YELLOW') ? '#1a202c' : '#ffffff';
     return `
-      <div class="gaveta-item" style="background-color: ${hexCor}; color: ${corTexto};" title="${g.medicamento}">
+      <div class="gaveta-item gaveta-cor-${g.cor}" title="${g.medicamento}">
         ${g.letra}
       </div>
     `;
@@ -106,21 +134,28 @@ function renderizarGavetas(doses) {
 
 function renderizarCardsDoses() {
   const container = document.getElementById('listaDoses');
+  if (!container) return;
+
   const agora = new Date();
 
-  container.innerHTML = dosesLista.map((dose, index) => {
+  container.innerHTML = dosesLista.map(dose => {
     const idDoseReal = dose.id || dose.idDose;
-    const cor = dose.corCaixa ? dose.corCaixa.toUpperCase() : 'CINZA';
-    const hexCor = MAPA_CORES[cor] || '#718096';
-    const letra = dose.identificadorCaixa || '-';
-    const horarioData = new Date(dose.horarioProgramado);
-    const horarioFormatado = horarioData.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const cor = (dose.corCaixa || dose.cor || 'CINZA').toUpperCase();
+    const hexCor = MAPA_CORES[cor] || '#929292';
+    const letra = (dose.identificadorCaixa || dose.identificador || dose.letra || '-').toUpperCase();
     
+    const horarioData = new Date(dose.horarioProgramado);
+    const horarioFormatado = isNaN(horarioData.getTime()) ? '--:--' : horarioData.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     const diffMs = horarioData - agora;
     const diffMinutos = Math.floor(diffMs / 60000);
 
     const eUrgente = diffMinutos <= 30 && diffMinutos >= -120;
     const classeUrgencia = eUrgente ? 'destaque-urgente' : '';
+
+    const nomeMed = dose.nomeMedicamento || dose.medicamentoNome || 'Medicamento';
+    const qtd = dose.quantidadePorDose || dose.quantidade || 1;
+    const unidade = dose.unidade ? dose.unidade.toLowerCase() : 'dose';
 
     return `
       <div class="dose-card cor-${cor} ${classeUrgencia}" id="dose-card-${idDoseReal}">
@@ -133,11 +168,11 @@ function renderizarCardsDoses() {
 
         <div style="display: flex; align-items: center; margin: 10px 0;">
           <span class="badge-gaveta" style="background-color: ${hexCor};">${letra}</span>
-          <h3 style="margin: 0; color: #1a202c;">💊 ${dose.nomeMedicamento}</h3>
+          <h3 style="margin: 0; color: #1a202c;">💊 ${nomeMed}</h3>
         </div>
 
         <p style="color: #4a5568; font-size: 0.95rem; margin-bottom: 8px;">
-          Dose: <strong>${dose.quantidadePorDose} ${dose.unidade ? dose.unidade.toLowerCase() : ''}</strong>
+          Dose: <strong>${qtd} ${unidade}</strong>
         </p>
 
         <button class="btn-confirmar" onclick="confirmarDose(${idDoseReal})">
@@ -156,7 +191,6 @@ function iniciarContagemRegressiva() {
 
     if (!dosesLista || dosesLista.length === 0) return;
 
-    // A próxima dose é sempre a primeira da lista ordenada
     const proxima = dosesLista[0];
     const dataProxima = new Date(proxima.horarioProgramado);
     const diffGeral = dataProxima - agora;
@@ -167,7 +201,12 @@ function iniciarContagemRegressiva() {
 
     if (banner && clock && nomeRemedio) {
       banner.style.display = 'block';
-      nomeRemedio.textContent = `💊 ${proxima.nomeMedicamento} (${proxima.quantidadePorDose} ${proxima.unidade || ''}) - Gaveta ${proxima.identificadorCaixa || ''}`;
+      const nomeMed = proxima.nomeMedicamento || proxima.medicamentoNome || 'Medicamento';
+      const qtd = proxima.quantidadePorDose || proxima.quantidade || 1;
+      const unid = proxima.unidade || 'dose';
+      const letra = proxima.identificadorCaixa || proxima.identificador || '-';
+
+      nomeRemedio.textContent = `💊 ${nomeMed} (${qtd} ${unid}) - Gaveta ${letra}`;
 
       if (diffGeral <= 0) {
         clock.textContent = "HORA DE TOMAR!";
@@ -182,7 +221,6 @@ function iniciarContagemRegressiva() {
       }
     }
 
-    // Atualiza individualmente o contador no badge de cada card
     dosesLista.forEach(dose => {
       const idReal = dose.id || dose.idDose;
       const elBadge = document.getElementById(`badge-timer-${idReal}`);

@@ -46,6 +46,7 @@ async function carregarMedicamentosIdoso(idIdoso) {
   const container = document.getElementById('gridMedicamentos');
 
   try {
+    // Tenta o endpoint principal de medicamentos do idoso
     const res = await fetchAutenticado(`${API_BASE_URL}/medicamentos/idoso/${idIdoso}`);
     
     if (res.ok) {
@@ -54,7 +55,7 @@ async function carregarMedicamentosIdoso(idIdoso) {
       if (!Array.isArray(medicamentos) || medicamentos.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
-            <p>🎉 Nenhum medicamento cadastrado no momento!</p>
+            <p>🎉 Nenhum medicamento cadastrado para você no momento!</p>
           </div>`;
         return;
       }
@@ -62,7 +63,8 @@ async function carregarMedicamentosIdoso(idIdoso) {
       container.innerHTML = medicamentos.map(med => renderizarCardMedicamento(med)).join('');
       configurarBotoesTomar();
     } else {
-      container.innerHTML = `<p class="empty-state">Erro ao carregar medicamentos. Tente novamente mais tarde.</p>`;
+      console.error('Status de erro recebido:', res.status);
+      container.innerHTML = `<p class="empty-state">Nenhum medicamento encontrado ou falha na resposta do servidor (${res.status}).</p>`;
     }
   } catch (err) {
     console.error('Erro ao buscar medicamentos:', err);

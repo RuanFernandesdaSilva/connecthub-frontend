@@ -6,23 +6,132 @@
   <title>Vitalis - Meus Remédios</title>
   <link rel="stylesheet" href="css/home-idoso.css">
   <style>
+    .btn-voltar {
+      background: transparent;
+      border: none;
+      color: #4a5568;
+      cursor: pointer;
+      font-weight: bold;
+      margin-bottom: 15px;
+      font-size: 1rem;
+    }
+    
+    /* Painel do Gerenciador de Tempo Geral */
+    .timer-banner {
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      color: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+    }
+    .timer-banner.urgente {
+      background: linear-gradient(135deg, #991b1b, #ef4444);
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+      animation: pulse 1.5s infinite;
+    }
+    .timer-clock {
+      font-size: 2.5rem;
+      font-weight: 900;
+      letter-spacing: 2px;
+      margin: 10px 0;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    /* Grid de Gavetas Visuais (Fidelidade ao exemplo) */
+    .gavetas-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 15px;
+    }
+    .gaveta-item {
+      aspect-ratio: 1.5 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 2.2rem;
+      font-weight: 800;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #000000;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      user-select: none;
+    }
+    .gaveta-item.gaveta-ativa {
+      animation: pulse-gaveta 1.5s infinite alternate;
+      border: 4px solid #1a202c;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Mapeamento de Cores das Gavetas */
+    .gaveta-cor-A, .gaveta-cor-VERMELHO, .gaveta-cor-RED       { background-color: #ff3b30; color: #000000; }
+    .gaveta-cor-B, .gaveta-cor-AZUL, .gaveta-cor-BLUE          { background-color: #0093b2; color: #000000; }
+    .gaveta-cor-C, .gaveta-cor-AMARELO, .gaveta-cor-YELLOW     { background-color: #ffdc52; color: #000000; }
+    .gaveta-cor-D, .gaveta-cor-VERDE, .gaveta-cor-GREEN        { background-color: #00be63; color: #000000; }
+    .gaveta-cor-E, .gaveta-cor-ROXO, .gaveta-cor-PURPLE        { background-color: #d175f0; color: #000000; }
+    .gaveta-cor-F, .gaveta-cor-LARANJA, .gaveta-cor-ORANGE     { background-color: #ff7315; color: #000000; }
+    .gaveta-cor-G, .gaveta-cor-CIANO, .gaveta-cor-CYAN         { background-color: #3ee2eb; color: #000000; }
+    .gaveta-cor-H, .gaveta-cor-MARROM, .gaveta-cor-BROWN       { background-color: #7a4300; color: #ffffff; }
+    .gaveta-cor-I, .gaveta-cor-CINZA, .gaveta-cor-GREY         { background-color: #929292; color: #000000; }
+
+    /* Card da Dose */
     .dose-card {
       background: #ffffff;
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-      border-left: 10px solid #cbd5e0;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 18px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+      border-left: 14px solid #cbd5e0;
+      transition: all 0.3s ease;
     }
-    .dose-card.cor-VERMELHO { border-left-color: #e53e3e; }
-    .dose-card.cor-LARANJA  { border-left-color: #dd6b20; }
-    .dose-card.cor-AMARELO  { border-left-color: #d69e2e; }
-    .dose-card.cor-VERDE    { border-left-color: #38a169; }
-    .dose-card.cor-AZUL     { border-left-color: #3182ce; }
-    .dose-card.cor-ROXO     { border-left-color: #805ad5; }
-    .dose-card.cor-MARROM   { border-left-color: #744210; }
-    .dose-card.cor-BRANCO   { border-left-color: #e2e8f0; }
-    .dose-card.cor-PRETO    { border-left-color: #1a202c; }
+    .dose-card.destaque-urgente {
+      border: 3px solid #ef4444;
+      border-left-width: 14px;
+      background: #fef2f2;
+    }
+    
+    /* Bordas laterais dos Cards de Doses */
+    .cor-VERMELHO, .cor-RED       { border-left-color: #ff3b30; }
+    .cor-AZUL, .cor-BLUE          { border-left-color: #0093b2; }
+    .cor-AMARELO, .cor-YELLOW     { border-left-color: #ffdc52; }
+    .cor-VERDE, .cor-GREEN        { border-left-color: #00be63; }
+    .cor-ROXO, .cor-PURPLE        { border-left-color: #d175f0; }
+    .cor-LARANJA, .cor-ORANGE     { border-left-color: #ff7315; }
+    .cor-CIANO, .cor-CYAN         { border-left-color: #3ee2eb; }
+    .cor-MARROM, .cor-BROWN       { border-left-color: #7a4300; }
+    .cor-CINZA, .cor-GREY         { border-left-color: #929292; }
+
+    /* Badge de Tempo no Card */
+    .time-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.85rem;
+      background: #edf2f7;
+      color: #2d3748;
+    }
+    .time-badge.urgente {
+      background: #fed7d7;
+      color: #9b2c2c;
+    }
+
+    .badge-gaveta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      color: #000000;
+      font-weight: 800;
+      font-size: 1.1rem;
+      margin-right: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
 
     .btn-confirmar {
       width: 100%;
@@ -37,7 +146,16 @@
       cursor: pointer;
     }
     .btn-confirmar:active { transform: scale(0.98); }
-    .btn-voltar { background: transparent; border: none; color: #4a5568; cursor: pointer; font-weight: bold; margin-bottom: 15px; font-size: 1rem; }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+      100% { transform: scale(1); }
+    }
+    @keyframes pulse-gaveta {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.06); }
+    }
   </style>
 </head>
 <body>
@@ -47,9 +165,25 @@
       ← Voltar ao Painel
     </button>
 
+    <!-- Banner do Gerenciador de Tempo Geral -->
+    <div id="gerenciadorTempo" class="timer-banner" style="display: none;">
+      <span style="font-size: 0.9rem; text-transform: uppercase; font-weight: bold;">⏳ Próxima Dose Em:</span>
+      <div id="clockRegressivo" class="timer-clock">00:00:00</div>
+      <div id="proximoNomeRemedio" style="font-weight: 600; font-size: 1.05rem;">--</div>
+    </div>
+
+    <!-- Seção Visual das Gavetas -->
     <header class="card" style="margin-bottom: 20px;">
-      <h2>🔔 Próximas Doses</h2>
-      <p style="color: #4a5568;">Confira a cor da sua caixa e confirme quando tomar o remédio:</p>
+      <h2>🗄️ Minhas Gavetas de Remédios</h2>
+      <p style="color: #4a5568; font-size: 0.9rem;">Organização das caixas por cor e identificação:</p>
+      <div id="gridGavetas" class="gavetas-grid">
+        <p style="color: #718096; grid-column: span 3; text-align: center;">Carregando gavetas...</p>
+      </div>
+    </header>
+
+    <header class="card" style="margin-bottom: 20px;">
+      <h2>🔔 Lista de Doses</h2>
+      <p style="color: #4a5568;">Confirme quando tomar o medicamento:</p>
     </header>
 
     <div id="listaDoses">

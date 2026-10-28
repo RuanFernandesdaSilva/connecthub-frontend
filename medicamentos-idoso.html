@@ -3,192 +3,170 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vitalis - Meus Remédios</title>
+  <title>Vitalis - Meus Medicamentos</title>
   <link rel="stylesheet" href="css/home-idoso.css">
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
+    body {
       background-color: #f7fafc;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .btn-voltar {
+      background: transparent;
+      border: none;
+      color: #4a5568;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
-    .app-container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 15px;
-      min-height: 100vh;
+    .card-header {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      color: #2b6cb0;
+      font-size: 1.6rem;
+    }
+
+    /* CONTAINER EM GRID DAS CAIXAS DE MEDICAMENTO */
+    .grid-medicamentos {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    /* CARD INDIVIDUAL DO MEDICAMENTO */
+    .med-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
       display: flex;
       flex-direction: column;
-    }
-
-    .header-nav {
-      display: flex;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 15px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+      transition: transform 0.2s;
     }
 
-    .btn-voltar {
-      background: #e2e8f0;
-      border: none;
-      color: #2d3748;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 1rem;
+    .med-card:hover {
+      transform: translateY(-4px);
     }
 
-    /* Grid de Gavetas Preenchendo a Tela */
-    .gavetas-full-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
-      flex: 1;
-      align-content: start;
-      margin-top: 10px;
-    }
-
-    /* Estilo do Bloco da Gaveta */
-    .gaveta-box {
-      position: relative;
-      aspect-ratio: 1.3 / 1;
+    /* BLOCO DA CAIXA ORGANIZADORA (INSPIRADO NA IMAGEM) */
+    .caixa-bloco {
+      width: 140px;
+      height: 90px;
       border-radius: 12px;
       display: flex;
-      align-items: center;
       justify-content: center;
-      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-      cursor: pointer;
-      user-select: none;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-      border: 3px solid transparent;
-    }
-
-    .gaveta-box:active {
-      transform: scale(0.95);
-    }
-
-    /* Letra/Número Grande no Centro */
-    .gaveta-letra {
-      font-size: 3rem;
+      align-items: center;
+      font-size: 2.5rem;
       font-weight: 900;
-      color: #000000;
-      text-shadow: 0px 1px 2px rgba(255,255,255,0.4);
+      color: #ffffff;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      margin-bottom: 16px;
+      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);
     }
 
-    /* Badge de Status no Canto Superior Direito */
-    .status-badge {
-      position: absolute;
-      top: -8px;
-      right: -8px;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .med-info h3 {
+      font-size: 1.4rem;
+      color: #2d3748;
+      margin: 0 0 6px 0;
+    }
+
+    .med-info p {
+      font-size: 1.05rem;
+      color: #4a5568;
+      margin: 4px 0;
+    }
+
+    .med-horario {
+      background: #edf2f7;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      color: #2b6cb0;
       font-size: 1.1rem;
-      font-weight: bold;
+      margin: 10px 0;
+      display: inline-block;
+    }
+
+    /* BOTÃO GRANDE DE CONFIRMAÇÃO */
+    .btn-tomar {
+      background-color: #38a169;
       color: white;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-      border: 2px solid white;
-    }
-
-    .status-TOMADO { background-color: #38a169; }     /* Check Verde ✓ */
-    .status-PENDENTE { background-color: #3182ce; }   /* Relógio Azul ⏳ */
-    .status-ATRASADO { background-color: #e53e3e; }   /* X Vermelho ✕ */
-    .status-HORA     { background-color: #dd6b20; }   /* Alerta Laranja ⚠️ */
-
-    /* Destaque para Remédio no Horário (Pulsante) */
-    .gaveta-box.destaque-hora {
-      border-color: #e53e3e;
-      animation: pulse-alerta 1.2s infinite alternate;
-      z-index: 10;
-    }
-
-    @keyframes pulse-alerta {
-      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.7); }
-      100% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(229, 62, 62, 0); }
-    }
-
-    /* Mapeamento Dinâmico de Cores da Caixa */
-    .bg-VERMELHO, .bg-RED       { background-color: #ff3b30; }
-    .bg-AZUL, .bg-BLUE          { background-color: #0093b2; }
-    .bg-AMARELO, .bg-YELLOW     { background-color: #ffdc52; }
-    .bg-VERDE, .bg-GREEN        { background-color: #00be63; }
-    .bg-ROXO, .bg-PURPLE        { background-color: #d175f0; }
-    .bg-LARANJA, .bg-ORANGE     { background-color: #ff7315; }
-    .bg-CIANO, .bg-CYAN         { background-color: #3ee2eb; }
-    .bg-MARROM, .bg-BROWN       { background-color: #7a4300; .gaveta-letra { color: #ffffff; } }
-    .bg-CINZA, .bg-GREY         { background-color: #929292; }
-
-    /* Modal Simples de Confirmação */
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.6);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 1000;
-    }
-    .modal-content {
-      background: white;
-      padding: 25px;
-      border-radius: 16px;
-      text-align: center;
-      width: 85%;
-      max-width: 400px;
-    }
-    .btn-confirmar-modal {
-      width: 100%;
-      padding: 15px;
-      background: #38a169;
-      color: white;
-      font-size: 1.2rem;
-      font-weight: bold;
       border: none;
       border-radius: 10px;
-      margin-top: 15px;
+      padding: 14px 20px;
+      font-size: 1.1rem;
+      font-weight: bold;
       cursor: pointer;
-    }
-    .btn-cancelar-modal {
       width: 100%;
-      padding: 10px;
-      background: transparent;
+      margin-top: 10px;
+      box-shadow: 0 4px 6px rgba(56, 161, 105, 0.2);
+    }
+
+    .btn-tomar:hover {
+      background-color: #2f855a;
+    }
+
+    .btn-tomado-disabled {
+      background-color: #cbd5e0;
       color: #718096;
       border: none;
-      margin-top: 8px;
-      cursor: pointer;
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      width: 100%;
+      margin-top: 10px;
+      cursor: not-allowed;
     }
-    .hidden { display: none !important; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #718096;
+      font-size: 1.2rem;
+      background: white;
+      border-radius: 12px;
+      grid-column: 1 / -1;
+    }
   </style>
 </head>
 <body>
+  <div class="container" style="max-width: 900px; padding: 20px; margin: 0 auto;">
+    
+    <button type="button" class="btn-voltar" onclick="voltarParaHome()">
+      ← Voltar ao Início
+    </button>
 
-  <div class="app-container">
-    <div class="header-nav">
-      <button class="btn-voltar" onclick="voltarParaHome()">← Voltar</button>
-      <h3 style="margin: 0; color: #2d3748;">Minhas Gavetas</h3>
-    </div>
-
-    <!-- Container do Grid de Gavetas -->
-    <div id="gridGavetas" class="gavetas-full-grid">
-      <p style="grid-column: span 3; text-align: center; color: #718096; margin-top: 40px;">
-        Carregando gavetas...
+    <header class="card-header">
+      <h2>💊 Meus Medicamentos</h2>
+      <p style="color: #64748b; font-size: 1rem; margin-top: 4px;">
+        Localize a caixa com a cor e letra/número indicados abaixo para tomar o seu remédio.
       </p>
-    </div>
+    </header>
+
+    <main>
+      <div id="gridMedicamentos" class="grid-medicamentos">
+        <p class="empty-state">Carregando seus medicamentos...</p>
+      </div>
+    </main>
+
   </div>
 
-  <!-- Modal de Confirmação ao Clicar na Gaveta -->
-  <div id="modalConfirmacao" class="modal-overlay hidden">
-    <div class="modal-content">
-      <h2 id="modalTitulo">Confirmar Remédio</h2>
-      <p id="modalSubtitulo" style="color: #4a5568; font-size: 1.1rem; margin: 15px 0;"></p>
-      <button id="btnTomarDose" class="btn-confirmar-modal">✅ Já Tomei</button>
-      <button class="btn-cancelar-modal" onclick="fecharModal()">Cancelar</button>
-    </div>
-  </div>
-
-  <script type="module" src="js/medicamentos-idoso.js"></script>
+  <script type="module" src="js/medicamento-idoso.js"></script>
 </body>
 </html>

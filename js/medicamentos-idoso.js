@@ -1,7 +1,19 @@
 import { API_BASE_URL } from './config.js';
 
-let idosoId = null;
-let doseSelecionadaId = null;
+let idosoLogado = null;
+
+// MAPEAMENTO COMPLETO DE CORES DO FORMULÁRIO PARA CÓDIGOS HEXADECIMAIS
+const CORES_CAIXA = {
+  VERMELHO: '#e53e3e',
+  LARANJA: '#dd6b20',
+  AMARELO: '#ecc94b',
+  VERDE: '#38a169',
+  AZUL: '#3182ce',
+  ROXO: '#805ad5',
+  MARROM: '#7b341e',
+  BRANCO: '#e2e8f0',
+  PRETO: '#1a202c'
+};
 
 async function fetchAutenticado(url, options = {}) {
   options.credentials = 'include';
@@ -17,134 +29,112 @@ function inicializar() {
   const usuarioRaw = localStorage.getItem('usuario');
   if (usuarioRaw) {
     try {
-      const user = JSON.parse(usuarioRaw);
-      idosoId = user.id;
+      idosoLogado = JSON.parse(usuarioRaw);
     } catch (e) {}
   }
 
-  if (!idosoId || idosoId === 'undefined') {
-    idosoId = localStorage.getItem('userId');
-  }
-
-  if (!idosoId || idosoId === 'undefined') {
+  const userId = idosoLogado?.id || localStorage.getItem('userId');
+  if (!userId) {
     window.location.href = 'index.html';
     return;
   }
 
-  carregarDosesEGavetas();
+  carregarMedicamentosIdoso(userId);
 }
 
-async function carregarDosesEGavetas() {
-  const grid = document.getElementById('gridGavetas');
+async function carregarMedicamentosIdoso(idIdoso) {
+  const container = document.getElementById('gridMedicamentos');
 
   try {
-    const res = await fetchAutenticado(`${API_BASE_URL}/doses/idoso/${idosoId}`);
-
+    const res = await fetchAutenticado(`${API_BASE_URL}/medicamentos/idoso/${idIdoso}`);
+    
     if (res.ok) {
-      const doses = await res.json();
+      const medicamentos = await res.json();
 
-      if (!Array.isArray(doses) || doses.length === 0) {
-        grid.innerHTML = `
-          <div style="grid-column: span 3; text-align: center; margin-top: 50px;">
-            <p style="font-size: 1.2rem; color: #4a5568;">🎉 Nenhuma gaveta ou dose pendente para hoje!</p>
+      if (!Array.isArray(medicamentos) || medicamentos.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>🎉 Nenhum medicamento cadastrado no momento!</p>
           </div>`;
         return;
       }
 
-      renderizarGavetas(doses);
+      container.innerHTML = medicamentos.map(med => renderizarCardMedicamento(med)).join('');
+      configurarBotoesTomar();
     } else {
-      grid.innerHTML = `<p style="grid-column: span 3; text-align: center; color: #e53e3e;">Erro ao carregar dados (${res.status}).</p>`;
+      container.innerHTML = `<p class="empty-state">Erro ao carregar medicamentos. Tente novamente mais tarde.</p>`;
     }
   } catch (err) {
-    console.error('Erro ao buscar doses:', err);
-    grid.innerHTML = '<p style="grid-column: span 3; text-align: center; color: #e53e3e;">Erro de conexão com o servidor.</p>';
+    console.error('Erro ao buscar medicamentos:', err);
+    container.innerHTML = `<p class="empty-state">Erro de conexão com o servidor.</p>`;
   }
 }
 
-function renderizarGavetas(doses) {
-  const grid = document.getElementById('gridGavetas');
-  const agora = new Date();
+function renderizarCardMedicamento(med) {
+  // Define a cor HEX correspondente ou usa cinza escuro por padrão
+  const corHex = CORES_CAIXA[med.corCaixa] || '#4a5568';
+  
+  // Trata a cor da fonte caso o fundo seja amarelo ou branco para garantir legibilidade
+  const corTexto = (med.corCaixa === 'AMARELO' || med.corCaixa === 'BRANCO') ? '#1a202c' : '#ffffff';
 
-  grid.innerHTML = doses.map(dose => {
-    const idDose = dose.id || dose.idDose;
+  const proximoHorario = med.proximoHorario 
+    ? new Date(med.proximoHorario).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : 'No horário';
 
-    // CAPTURA DA COR CADASTRADA NO REMÉDIO (Com Fallbacks do DTO)
-    const corBruta = dose.corCaixa || dose.cor || (dose.medicamento && dose.medicamento.corCaixa) || 'CINZA';
-    const cor = corBruta.toUpperCase().trim();
-
-    // CAPTURA DA LETRA/NÚMERO CADASTRADO NO REMÉDIO (Com Fallbacks do DTO)
-    const letraBruta = dose.identificadorCaixa || dose.identificador || dose.letra || (dose.medicamento && dose.medicamento.identificadorCaixa) || '?';
-    const letra = letraBruta.toUpperCase().trim();
-
-    const statusDose = (dose.status || 'PENDENTE').toUpperCase();
-
-    const horarioProgramado = new Date(dose.horarioProgramado);
-    const diffMinutos = Math.floor((horarioProgramado - agora) / 60000);
-
-    let iconeStatus = '⏳';
-    let classeStatus = 'status-PENDENTE';
-    let classeDestaque = '';
-
-    // Regras visuais de Status Real
-    if (statusDose === 'CONCLUIDO' || statusDose === 'TOMADO' || dose.confirmado) {
-      iconeStatus = '✓';
-      classeStatus = 'status-TOMADO';
-    } else if (diffMinutos < -15) {
-      // Passou do horário = Atrasado (✕ vermelho)
-      iconeStatus = '✕';
-      classeStatus = 'status-ATRASADO';
-    } else if (diffMinutos <= 30 && diffMinutos >= -15) {
-      // Na janela do horário de tomar = Alerta (⚠️ pulsante)
-      iconeStatus = '⚠️';
-      classeStatus = 'status-HORA';
-      classeDestaque = 'destaque-hora';
-    } else {
-      // Pendente futuro (⏳ relógio)
-      iconeStatus = '⏳';
-      classeStatus = 'status-PENDENTE';
-    }
-
-    return `
-      <div class="gaveta-box bg-${cor} ${classeDestaque}" onclick="abrirModalConfirmacao(${idDose}, '${letra}', '${statusDose}')">
-        <div class="status-badge ${classeStatus}">${iconeStatus}</div>
-        <div class="gaveta-letra">${letra}</div>
+  return `
+    <div class="med-card">
+      <!-- BLOCO VISUAL DA CAIXA ORGANIZADORA -->
+      <div class="caixa-bloco" style="background-color: ${corHex}; color: ${corTexto};">
+        ${med.identificadorCaixa || '?'}
       </div>
-    `;
-  }).join('');
+
+      <div class="med-info">
+        <h3>${med.nome}</h3>
+        <p><strong>Dose:</strong> ${med.quantidadePorDose} ${med.unidade} (${med.dosagem})</p>
+        
+        <div class="med-horario">
+          ⏰ Próximo: ${proximoHorario}
+        </div>
+      </div>
+
+      ${med.tomadoHoje ? `
+        <button class="btn-tomado-disabled" disabled>
+          ✅ Já Tomado Hoje
+        </button>
+      ` : `
+        <button class="btn-tomar" data-id="${med.id}">
+          💊 Confirmar que Tomei
+        </button>
+      `}
+    </div>
+  `;
 }
 
-function abrirModalConfirmacao(idDose, letra, statusAtual) {
-  if (statusAtual === 'CONCLUIDO' || statusAtual === 'TOMADO') {
-    alert('Esta dose já foi confirmada!');
-    return;
-  }
-
-  doseSelecionadaId = idDose;
-  const modal = document.getElementById('modalConfirmacao');
-  const subtitulo = document.getElementById('modalSubtitulo');
-
-  subtitulo.textContent = `Deseja confirmar a tomada da Gaveta ${letra}?`;
-  modal.classList.remove('hidden');
+function configurarBotoesTomar() {
+  document.querySelectorAll('.btn-tomar').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const idMedicamento = e.target.getAttribute('data-id');
+      await confirmarDose(idMedicamento);
+    });
+  });
 }
 
-function fecharModal() {
-  document.getElementById('modalConfirmacao').classList.add('hidden');
-  doseSelecionadaId = null;
-}
-
-async function confirmarTomadaDose() {
-  if (!doseSelecionadaId) return;
+async function confirmarDose(idMedicamento) {
+  const userId = idosoLogado?.id || localStorage.getItem('userId');
 
   try {
-    const res = await fetchAutenticado(`${API_BASE_URL}/doses/${doseSelecionadaId}/confirmar`, {
-      method: 'PUT'
+    const res = await fetchAutenticado(`${API_BASE_URL}/medicamentos/${idMedicamento}/tomar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idIdoso: parseInt(userId, 10) })
     });
 
     if (res.ok) {
-      fecharModal();
-      carregarDosesEGavetas(); // Recarrega para atualizar para ✓ verde e disparar a notificação no Telegram do familiar
+      alert('Parabéns! Dose confirmada com sucesso. 🎉');
+      carregarMedicamentosIdoso(userId);
     } else {
-      alert('Não foi possível confirmar a dose no servidor.');
+      const errText = await res.text();
+      alert(`Erro ao registrar dose: ${errText}`);
     }
   } catch (err) {
     alert('Erro de conexão ao confirmar a dose.');
@@ -155,14 +145,5 @@ function voltarParaHome() {
   window.location.href = 'home-idoso.html';
 }
 
-// Event Listeners
-const btnTomar = document.getElementById('btnTomarDose');
-if (btnTomar) {
-  btnTomar.addEventListener('click', confirmarTomadaDose);
-}
-
-window.abrirModalConfirmacao = abrirModalConfirmacao;
-window.fecharModal = fecharModal;
 window.voltarParaHome = voltarParaHome;
-
 document.addEventListener('DOMContentLoaded', inicializar);

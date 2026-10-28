@@ -30,11 +30,16 @@ function inicializar() {
   if (usuarioRaw) {
     try {
       idosoLogado = JSON.parse(usuarioRaw);
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Erro ao parsear usuario do localStorage:', e);
+    }
   }
 
   const userId = idosoLogado?.id || localStorage.getItem('userId');
+  console.log('ID do Idoso Identificado:', userId);
+
   if (!userId) {
+    console.warn('Nenhum ID encontrado. Redirecionando para login...');
     window.location.href = 'index.html';
     return;
   }
@@ -44,43 +49,79 @@ function inicializar() {
 
 async function carregarMedicamentosIdoso(idIdoso) {
   const container = document.getElementById('gridMedicamentos');
+  if (!container) {
+    console.error('Elemento #gridMedicamentos não foi encontrado na página HTML.');
+    return;
+  }
 
-  try {
-    // Tenta o endpoint principal de medicamentos do idoso
-    const res = await fetchAutenticado(`${API_BASE_URL}/medicamentos/idoso/${idIdoso}`);
-    
-    if (res.ok) {
-      const medicamentos = await res.json();
+  // URLs possíveis de fallback de acordo com a controller Spring Boot
+  const endpoints = [
+    `${API_BASE_URL}/api/medicamentos/idoso/${idIdoso}`,
+    `${API_BASE_URL}/medicamentos/idoso/${idIdoso}`,
+    `${API_BASE_URL}/api/medicamentos?idIdoso=${idIdoso}`,
+    `${API_BASE_URL}/medicamentos?idIdoso=${idIdoso}`
+  ];
 
-      if (!Array.isArray(medicamentos) || medicamentos.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <p>🎉 Nenhum medicamento cadastrado para você no momento!</p>
-          </div>`;
-        return;
+  let medicamentos = null;
+  let ultimoStatus = null;
+
+  for (const url of endpoints) {
+    try {
+      console.log('Tentando buscar medicamentos via:', url);
+      const res = await fetchAutenticado(url);
+      ultimoStatus = res.status;
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Dados recebidos da API:', data);
+
+        // Normalização de array caso venha encapsulado (ex: { content: [...] })
+        if (Array.isArray(data)) {
+          medicamentos = data;
+        } else if (Array.isArray(data?.medicamentos)) {
+          medicamentos = data.medicamentos;
+        } else if (Array.isArray(data?.content)) {
+          medicamentos = data.content;
+        }
+
+        if (medicamentos !== null) break;
       }
-
-      container.innerHTML = medicamentos.map(med => renderizarCardMedicamento(med)).join('');
-      configurarBotoesTomar();
-    } else {
-      console.error('Status de erro recebido:', res.status);
-      container.innerHTML = `<p class="empty-state">Nenhum medicamento encontrado ou falha na resposta do servidor (${res.status}).</p>`;
+    } catch (err) {
+      console.warn(`Falha na requisição para ${url}:`, err);
     }
-  } catch (err) {
-    console.error('Erro ao buscar medicamentos:', err);
-    container.innerHTML = `<p class="empty-state">Erro de conexão com o servidor.</p>`;
+  }
+
+  if (medicamentos !== null) {
+    if (medicamentos.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>🎉 Nenhum medicamento cadastrado para você no momento!</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = medicamentos.map(med => renderizarCardMedicamento(med)).join('');
+    configurarBotoesTomar();
+  } else {
+    console.error('Nenhum endpoint retornou sucesso. Último status:', ultimoStatus);
+    container.innerHTML = `
+      <div class="empty-state">
+        <p>⚠️ Não foi possível carregar os medicamentos.</p>
+        <small style="color: #a0aec0;">Verifique no console F12 ou tente recarregar a página. (Status: ${ultimoStatus || 'Erro de Rede'})</small>
+      </div>`;
   }
 }
 
 function renderizarCardMedicamento(med) {
-  // Define a cor HEX correspondente ou usa cinza escuro por padrão
-  const corHex = CORES_CAIXA[med.corCaixa] || '#4a5568';
+  // Trata maiúsculas/minúsculas da cor cadastrada no banco
+  const chaveCor = (med.corCaixa || '').toUpperCase();
+  const corHex = CORES_CAIXA[chaveCor] || '#4a5568';
   
-  // Trata a cor da fonte caso o fundo seja amarelo ou branco para garantir legibilidade
-  const corTexto = (med.corCaixa === 'AMARELO' || med.corCaixa === 'BRANCO') ? '#1a202c' : '#ffffff';
+  // Cor do texto do bloco para manter contraste
+  const corTexto = (chaveCor === 'AMARELO' || chaveCor === 'BRANCO') ? '#1a202c' : '#ffffff';
 
-  const proximoHorario = med.proximoHorario 
-    ? new Date(med.proximoHorario).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const proximoHorario = med.primeiroHorario || med.proximoHorario
+    ? new Date(med.primeiroHorario || med.proximoHorario).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     : 'No horário';
 
   return `
@@ -91,11 +132,11 @@ function renderizarCardMedicamento(med) {
       </div>
 
       <div class="med-info">
-        <h3>${med.nome}</h3>
-        <p><strong>Dose:</strong> ${med.quantidadePorDose} ${med.unidade} (${med.dosagem})</p>
+        <h3>${med.nome || 'Medicamento sem nome'}</h3>
+        <p><strong>Dose:</strong> ${med.quantidadePorDose || 1} ${med.unidade || ''} (${med.dosagem || ''})</p>
         
         <div class="med-horario">
-          ⏰ Próximo: ${proximoHorario}
+          ⏰ Horário: ${proximoHorario}
         </div>
       </div>
 
@@ -125,7 +166,7 @@ async function confirmarDose(idMedicamento) {
   const userId = idosoLogado?.id || localStorage.getItem('userId');
 
   try {
-    const res = await fetchAutenticado(`${API_BASE_URL}/medicamentos/${idMedicamento}/tomar`, {
+    const res = await fetchAutenticado(`${API_BASE_URL}/api/medicamentos/${idMedicamento}/tomar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idIdoso: parseInt(userId, 10) })

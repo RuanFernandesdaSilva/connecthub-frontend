@@ -46,7 +46,7 @@ async function carregarDosesEGavetas() {
       if (!Array.isArray(doses) || doses.length === 0) {
         grid.innerHTML = `
           <div style="grid-column: span 3; text-align: center; margin-top: 50px;">
-            <p style="font-size: 1.2rem; color: #4a5568;">🎉 Nenhuma gaveta/dose cadastrada para hoje!</p>
+            <p style="font-size: 1.2rem; color: #4a5568;">🎉 Nenhuma gaveta ou dose pendente para hoje!</p>
           </div>`;
         return;
       }
@@ -67,8 +67,15 @@ function renderizarGavetas(doses) {
 
   grid.innerHTML = doses.map(dose => {
     const idDose = dose.id || dose.idDose;
-    const cor = (dose.corCaixa || dose.cor || 'CINZA').toUpperCase();
-    const letra = (dose.identificadorCaixa || dose.identificador || dose.letra || '?').toUpperCase();
+
+    // CAPTURA DA COR CADASTRADA NO REMÉDIO (Com Fallbacks do DTO)
+    const corBruta = dose.corCaixa || dose.cor || (dose.medicamento && dose.medicamento.corCaixa) || 'CINZA';
+    const cor = corBruta.toUpperCase().trim();
+
+    // CAPTURA DA LETRA/NÚMERO CADASTRADO NO REMÉDIO (Com Fallbacks do DTO)
+    const letraBruta = dose.identificadorCaixa || dose.identificador || dose.letra || (dose.medicamento && dose.medicamento.identificadorCaixa) || '?';
+    const letra = letraBruta.toUpperCase().trim();
+
     const statusDose = (dose.status || 'PENDENTE').toUpperCase();
 
     const horarioProgramado = new Date(dose.horarioProgramado);
@@ -78,21 +85,21 @@ function renderizarGavetas(doses) {
     let classeStatus = 'status-PENDENTE';
     let classeDestaque = '';
 
-    // Lógica dos Status Reais
+    // Regras visuais de Status Real
     if (statusDose === 'CONCLUIDO' || statusDose === 'TOMADO' || dose.confirmado) {
       iconeStatus = '✓';
       classeStatus = 'status-TOMADO';
     } else if (diffMinutos < -15) {
-      // Passou mais de 15 min do horário = Atrasado
+      // Passou do horário = Atrasado (✕ vermelho)
       iconeStatus = '✕';
       classeStatus = 'status-ATRASADO';
     } else if (diffMinutos <= 30 && diffMinutos >= -15) {
-      // Faltam até 30 min ou está dentro da tolerância = Hora de Tomar
+      // Na janela do horário de tomar = Alerta (⚠️ pulsante)
       iconeStatus = '⚠️';
       classeStatus = 'status-HORA';
       classeDestaque = 'destaque-hora';
     } else {
-      // Faltam mais de 30 min = Pendente futuro
+      // Pendente futuro (⏳ relógio)
       iconeStatus = '⏳';
       classeStatus = 'status-PENDENTE';
     }
@@ -135,7 +142,7 @@ async function confirmarTomadaDose() {
 
     if (res.ok) {
       fecharModal();
-      carregarDosesEGavetas(); // Recarrega para atualizar o status visual para ✓
+      carregarDosesEGavetas(); // Recarrega para atualizar para ✓ verde e disparar a notificação no Telegram do familiar
     } else {
       alert('Não foi possível confirmar a dose no servidor.');
     }
@@ -148,7 +155,11 @@ function voltarParaHome() {
   window.location.href = 'home-idoso.html';
 }
 
-document.getElementById('btnTomarDose').addEventListener('click', confirmarTomadaDose);
+// Event Listeners
+const btnTomar = document.getElementById('btnTomarDose');
+if (btnTomar) {
+  btnTomar.addEventListener('click', confirmarTomadaDose);
+}
 
 window.abrirModalConfirmacao = abrirModalConfirmacao;
 window.fecharModal = fecharModal;

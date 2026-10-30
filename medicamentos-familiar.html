@@ -1,148 +1,172 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vitalis - Gestão de Medicamentos</title>
-  <link rel="stylesheet" href="css/home-familiar.css">
-  <style>
-    .form-row { display: flex; gap: 12px; }
-    .form-group { flex: 1; display: flex; flex-direction: column; margin-bottom: 12px; }
-    .form-group label { font-size: 0.9rem; font-weight: 600; color: #2d3748; margin-bottom: 4px; }
-    .form-group input, .form-group select { padding: 10px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 0.95rem; }
-    fieldset { border: 1px dashed #cbd5e0; border-radius: 8px; padding: 12px; margin-bottom: 16px; }
-    legend { font-weight: bold; color: #2b6cb0; padding: 0 6px; }
-    .btn-submit { background-color: #2b6cb0; color: white; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; }
-    .btn-submit:hover { background-color: #1a365d; }
-    .btn-voltar { background: transparent; border: none; color: #4a5568; cursor: pointer; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 6px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ZELO - Remédios</title>
+
+    <link rel="stylesheet" href="css/medicamentos-familiar.css">
+    <link rel="stylesheet" href="../assistente/assistente.css">
+
+    <script src="../assistente/zelo-sync.js"></script>
 </head>
+
 <body>
-  <div class="container" style="max-width: 600px; padding: 20px;">
-    
-    <button type="button" class="btn-voltar" onclick="voltarParaHome()">
-      ← Voltar ao Painel
-    </button>
 
-    <header class="card" style="margin-bottom: 20px;">
-      <h2>💊 Cadastrar Medicamento</h2>
-      <p style="color: #64748b; font-size: 0.9rem;">Selecione o idoso e preencha as informações da prescrição.</p>
-    </header>
+<div class="wrapper">
 
-    <div id="responseMessage" class="alert hidden"></div>
-
-    <!-- FORMULÁRIO DE CADASTRO DE MEDICAMENTO -->
-    <section class="card" style="margin-bottom: 20px;">
-      <form id="formMedicamento">
-        <div class="form-group">
-          <label for="selectIdoso">Idoso Vinculado:</label>
-          <select id="selectIdoso" required>
-            <option value="">Carregando idosos...</option>
-          </select>
+    <!-- =====================================================
+         SIDEBAR
+         ===================================================== -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <img src="zelo2.png" alt="Zelo Logo">
         </div>
 
-        <div class="form-group">
-          <label for="nome">Nome do Medicamento:</label>
-          <input type="text" id="nome" placeholder="Ex: Losartana" required>
-        </div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li>
+                    <a href="home-familiar.html">
+                        INÍCIO
+                    </a>
+                </li>
+                <li>
+                    <a href="medicamentos-familiar.html" class="active">
+                        REMÉDIOS
+                    </a>
+                </li>
+                <li>
+                    <a href="../lembretefamilia/lembretesfamiliar.html">
+                        LEMBRETES
+                    </a>
+                </li>
+                <li>
+                    <a href="../compromissofamilia/compromissosfamiliar.html">
+                        COMPROMISSOS
+                    </a>
+                </li>
+            </ul>
+        </nav>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="dosagem">Dosagem:</label>
-            <input type="text" id="dosagem" placeholder="Ex: 50" required>
-          </div>
-          <div class="form-group">
-            <label for="unidade">Unidade:</label>
-            <select id="unidade" required>
-              <option value="MG">MG</option>
-              <option value="ML">ML</option>
-              <option value="COMPRIMIDO">Comprimido(s)</option>
-              <option value="GOTAS">Gotas</option>
-            </select>
-          </div>
-        </div>
+        <div class="sidebar-footer">
+            <a href="#" onclick="irParaPerfilIdoso(event)">
+                <span class="icon">👤</span>
+                PERFIL IDOSO
+            </a>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="quantidadePorDose">Qtd por Dose:</label>
-            <input type="number" step="0.5" id="quantidadePorDose" value="1" required>
-          </div>
-          <div class="form-group">
-            <label for="intervaloHoras">Intervalo (Horas):</label>
-            <input type="number" id="intervaloHoras" placeholder="Ex: 8" required>
-          </div>
+            <a href="#" onclick="sair(event)">
+                <span class="icon">➡️</span>
+                SAIR
+            </a>
         </div>
+    </aside>
 
-        <div class="form-group">
-          <label for="primeiroHorario">Primeiro Horário:</label>
-          <input type="datetime-local" id="primeiroHorario" required>
-        </div>
+    <!-- =====================================================
+         CONTEÚDO PRINCIPAL
+         ===================================================== -->
+    <main class="main-content">
 
-        <!-- CAIXA ORGANIZADORA -->
-        <fieldset>
-          <legend>📦 Caixa Organizadora</legend>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="corCaixa">Cor da Caixa:</label>
-              <select id="corCaixa" required>
-                <option value="VERMELHO">🟥 Vermelho</option>
-                <option value="LARANJA">🟧 Laranja</option>
-                <option value="AMARELO">🟨 Amarelo</option>
-                <option value="VERDE">🟩 Verde</option>
-                <option value="AZUL">🟦 Azul</option>
-                <option value="ROXO">🟪 Roxo</option>
-                <option value="MARROM">🟫 Marrom</option>
-                <option value="BRANCO">⬜ Branco</option>
-                <option value="PRETO">⬛ Preto</option>
-              </select>
+        <header class="top-header">
+
+            <!-- SININHO DE NOTIFICAÇÕES -->
+            <div class="notif-wrapper">
+                <button id="btn-sininho" class="bell-btn" title="Notificações">
+                    🔔
+                    <span id="notif-badge" class="notif-badge" style="display:none;">0</span>
+                </button>
+
+                <div id="notif-dropdown" class="notif-dropdown">
+                    <div class="notif-header">
+                        <h3>Notificações do Idoso</h3>
+                        <button id="btn-limpar-notif" class="notif-clear-btn">Limpar</button>
+                    </div>
+
+                    <div id="notif-lista" class="notif-list">
+                        <p class="notif-empty">Nenhuma notificação no momento.</p>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-              <label for="identificadorCaixa">Letra ou Número:</label>
-              <input type="text" id="identificadorCaixa" placeholder="Ex: 1 ou A" required>
+
+            <!-- USUÁRIO LOGADO -->
+            <div class="user-pill">
+                <div class="user-info">
+                    <span>
+                        Olá, <strong id="nome-familiar">usuário!</strong>
+                    </span>
+                    <small id="idoso-label">
+                        Idoso: carregando...
+                    </small>
+                </div>
+
+                <div class="user-avatar" id="avatar-container">
+                    👤
+                </div>
             </div>
-          </div>
-        </fieldset>
 
-        <!-- DURAÇÃO -->
-        <fieldset>
-          <legend>⏳ Duração do Tratamento</legend>
-          <div class="form-group">
-            <label for="tipoTratamento">Tipo:</label>
-            <select id="tipoTratamento" required>
-              <option value="TEMPORARIO">Temporário</option>
-              <option value="CONTINUO">Uso Contínuo</option>
-            </select>
-          </div>
+        </header>
 
-          <div id="campoDuracao" class="form-row">
-            <div class="form-group">
-              <label for="valorDuracao">Duração:</label>
-              <input type="number" id="valorDuracao" min="1" placeholder="Ex: 7">
+        <!-- ALERTA DE FEEDBACK DA API -->
+        <div id="responseMessage" class="alert hidden" style="margin-bottom: 20px;"></div>
+
+        <!-- =====================================================
+             AÇÕES / BOTÕES PRINCIPAIS
+             ===================================================== -->
+        <div class="actions-list">
+
+            <div class="info-pill">
+                <span class="icon">💊</span>
+                <p>
+                    Aqui você pode gerenciar remédios do idoso:
+                    <strong id="nome-idoso">Carregando...</strong>
+                </p>
             </div>
-            <div class="form-group">
-              <label for="unidadeDuracao">Unidade de Tempo:</label>
-              <select id="unidadeDuracao">
-                <option value="DIAS">Dias</option>
-                <option value="MESES">Meses</option>
-                <option value="ANOS">Anos</option>
-              </select>
-            </div>
-          </div>
-        </fieldset>
 
-        <button type="submit" class="btn-submit">Salvar Prescrição</button>
-      </form>
-    </section>
+            <!-- ADICIONAR REMÉDIO -->
+            <button class="btn-action" id="btn-adicionar">
+                <div class="btn-left">
+                    <span class="btn-icon">⊕</span>
+                    <span class="btn-text">Adicionar remédio</span>
+                </div>
+                <span class="btn-arrow">❯</span>
+            </button>
 
-    <!-- HISTÓRICO DE DOSES -->
-    <section class="card">
-      <h3>📜 Histórico de Doses do Idoso</h3>
-      <div id="listaHistorico" style="margin-top: 10px;">
-        <p style="color: #666; font-size: 0.9rem;">Selecione um idoso para ver o histórico de confirmações.</p>
-      </div>
-    </section>
-  </div>
+            <!-- REMOVEDOR DE REMÉDIO -->
+            <button class="btn-action" id="btn-remover">
+                <div class="btn-left">
+                    <span class="btn-icon">⊖</span>
+                    <span class="btn-text">Remover remédio</span>
+                </div>
+                <span class="btn-arrow">❯</span>
+            </button>
 
-  <script type="module" src="js/medicamentos-familiar.js"></script>
+            <!-- COR DA GAVETA -->
+            <button class="btn-action" id="btn-cor-gaveta">
+                <div class="btn-left">
+                    <span class="btn-icon">📂</span>
+                    <span class="btn-text">Definir cor de gaveta</span>
+                </div>
+                <span class="btn-arrow">❯</span>
+            </button>
+
+            <!-- LISTA DE REMÉDIOS -->
+            <button class="btn-action" id="btn-lista">
+                <div class="btn-left">
+                    <span class="btn-icon">📚</span>
+                    <span class="btn-text">Ver lista de remédios</span>
+                </div>
+                <span class="btn-arrow">❯</span>
+            </button>
+
+        </div>
+
+    </main>
+
+</div>
+
+<!-- JAVASCRIPT -->
+<script type="module" src="js/medicamentos-familiar.js"></script>
+<script src="../assistente/assistente.js"></script>
+
 </body>
 </html>

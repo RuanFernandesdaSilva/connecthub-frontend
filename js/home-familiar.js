@@ -15,9 +15,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-/**
- * Encerra a sessão/janela no Telegram WebApp ou Navegador.
- */
 function fecharEFinalizarWebApp() {
   if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
     window.Telegram.WebApp.close();
@@ -26,9 +23,6 @@ function fecharEFinalizarWebApp() {
   }
 }
 
-/**
- * Lê e consolida a sessão local
- */
 function carregarSessaoLocal() {
   const urlParams = new URLSearchParams(window.location.search);
   const idUrl = urlParams.get('id');
@@ -135,10 +129,8 @@ async function inicializarHomeFamiliar() {
 
   await fecharScannerQrCode(true);
 
-  // Renderização inicial através do cache local
   renderizarPerfil();
 
-  // Consulta o Spring Boot para recuperar a foto do banco caso o localStorage tenha sido limpo
   if (usuarioLogado && usuarioLogado.id && !isNaN(usuarioLogado.id)) {
     try {
       const res = await fetch(`${API_BASE_URL}/usuarios/${usuarioLogado.id}`, {
@@ -169,9 +161,10 @@ async function inicializarHomeFamiliar() {
   }
 
   await carregarIdososVinculados(usuarioLogado.id);
+  atualizarTotaisDashboard();
 }
 
-// 2. RENDERIZAÇÃO DO PERFIL DO FAMILIAR
+// 2. PERFIL DO FAMILIAR
 function renderizarPerfil() {
   if (!usuarioLogado) return;
 
@@ -191,13 +184,12 @@ function renderizarPerfil() {
   if (avatarElem) avatarElem.src = foto;
 }
 
-// 3. CARREGAR IDOSOS VINCULADOS
+// 3. IDOSOS VINCULADOS
 async function carregarIdososVinculados(idFamiliar) {
   const container = document.getElementById('listaIdososVinculados');
   if (!container) return;
 
   if (!idFamiliar || idFamiliar === 'undefined' || idFamiliar === 'null' || isNaN(idFamiliar)) {
-    console.warn('Nenhum ID de familiar válido fornecido para buscar vínculos.');
     container.innerHTML = '<p style="color: #666;">Nenhum idoso vinculado ainda.</p>';
     return;
   }
@@ -236,15 +228,22 @@ async function carregarIdososVinculados(idFamiliar) {
         return;
       }
 
+      if (!localStorage.getItem('selectedIdoso') && dados[0]) {
+        const p = dados[0].idoso || dados[0];
+        localStorage.setItem('selectedIdoso', JSON.stringify({
+          id: p.id || dados[0].idIdoso,
+          nome: p.nome || dados[0].nomeIdoso || 'Idoso'
+        }));
+      }
+
       container.innerHTML = dados.map(item => {
         const idoso = item.idoso || item.usuario || item;
-
         const nome = idoso.nome || item.nomeIdoso || item.nome || 'Idoso';
         const idExibicao = idoso.id || item.idIdoso || item.id || '--';
         const foto = idoso.fotoUrl || idoso.imagemUrl || item.fotoIdosoUrl || item.fotoUrl || AVATAR_IDOSO_PADRAO;
 
         return `
-          <div class="card-idoso" style="border: 1px solid #cbd5e0; padding: 10px 15px; border-radius: 8px; background: #f8fafc; display: flex; align-items: center; gap: 10px;">
+          <div class="card-idoso" onclick="selecionarIdoso('${idExibicao}', '${escapeHtml(nome)}')" style="border: 1px solid #cbd5e0; padding: 10px 15px; border-radius: 8px; background: #ffffff; display: flex; align-items: center; gap: 10px; cursor: pointer;">
             <img src="${foto}" alt="${escapeHtml(nome)}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
             <div>
               <strong style="display: block; font-size: 0.95rem; color: #2d3748;">${escapeHtml(nome)}</strong>
@@ -262,7 +261,12 @@ async function carregarIdososVinculados(idFamiliar) {
   }
 }
 
-// 4. LEITOR DE QR CODE VIA CÂMERA TRASEIRA/PRINCIPAL DIRETA
+function selecionarIdoso(id, nome) {
+  localStorage.setItem('selectedIdoso', JSON.stringify({ id, nome }));
+  atualizarTotaisDashboard();
+}
+
+// 4. LEITOR DE QR CODE VIA CÂMERA
 async function iniciarLeitorQrCode() {
   const modalScanner = document.getElementById('modalScanner');
   if (modalScanner) {
@@ -285,7 +289,6 @@ async function iniciarLeitorQrCode() {
         qrbox: { width: 220, height: 220 }
       };
 
-      // Define "environment" para acionar a câmera principal/traseira diretamente
       await html5QrCodeScanner.start(
         { facingMode: "environment" },
         config,
@@ -298,8 +301,8 @@ async function iniciarLeitorQrCode() {
       exibirStatusScanner('Biblioteca de QR Code não disponível.', 'erro');
     }
   } catch (err) {
-    console.error('Erro ao acessar a câmera principal:', err);
-    exibirStatusScanner('Não foi possível acessar a câmera do dispositivo diretamente.', 'erro');
+    console.error('Erro ao acessar a câmera:', err);
+    exibirStatusScanner('Não foi possível acessar a câmera do dispositivo.', 'erro');
   }
 }
 
@@ -353,7 +356,7 @@ async function onScanSuccess(decodedText) {
       }, 1200);
     } else {
       const erroText = await response.text();
-      exibirStatusScanner(`Erro ao vincular: ${erroText || 'Solicitação recusada pelo servidor.'}`, 'erro');
+      exibirStatusScanner(`Erro ao vincular: ${erroText || 'Solicitação recusada.'}`, 'erro');
     }
 
   } catch (e) {
@@ -390,16 +393,71 @@ function exibirStatusScanner(texto, tipo) {
   const statusDiv = document.getElementById('statusVinculoScanner');
   if (statusDiv) {
     statusDiv.textContent = texto;
-    statusDiv.className = `alert alert-${tipo}`;
+    statusDiv.style.background = tipo === 'erro' ? '#fed7d7' : tipo === 'sucesso' ? '#c6f6d5' : '#e2e8f0';
+    statusDiv.style.color = tipo === 'erro' ? '#9b2c2c' : tipo === 'sucesso' ? '#22543d' : '#2d3748';
     statusDiv.classList.remove('hidden');
   }
 }
 
-// 5. NAVEGAÇÃO E LOGOUT
-function mostrarAvisoEmBreve(modulo) {
-  alert(`O módulo de ${modulo} estará disponível em breve!`);
+// 5. TOTAIS E RESUMOS
+function obterIdosoAtual() {
+  const idosoSalvo = JSON.parse(localStorage.getItem("selectedIdoso"));
+  if (idosoSalvo && idosoSalvo.id) {
+    return idosoSalvo;
+  }
+  return { id: "12345", nome: "Miquéias de Sousa" };
 }
 
+function obterDataAtualLocal() {
+  const agora = new Date();
+  const ano = agora.getFullYear();
+  const mes = String(agora.getMonth() + 1).padStart(2, '0');
+  const dia = String(agora.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+function atualizarTotaisDashboard() {
+  const idoso = obterIdosoAtual();
+
+  const idosoLabel = document.getElementById("current-idoso-label");
+  if (idosoLabel) {
+    idosoLabel.textContent = `Idoso: ${idoso.nome}`;
+  }
+
+  // Lembretes
+  const CHAVE_LEMBRETES = `zelo_lembretes_${idoso.id}`;
+  const lembretes = JSON.parse(localStorage.getItem(CHAVE_LEMBRETES)) || [];
+  const totalLembretesCard = document.getElementById("total-lembretes-card");
+  if (totalLembretesCard) {
+    const qtd = lembretes.length;
+    totalLembretesCard.textContent = `${qtd} ${qtd === 1 ? 'cadastrado' : 'cadastrados'}`;
+  }
+
+  // Compromissos
+  const CHAVE_COMPROMISSOS = `zelo_compromissos_${idoso.id}`;
+  const compromissos = JSON.parse(localStorage.getItem(CHAVE_COMPROMISSOS)) || [];
+  const hoje = obterDataAtualLocal();
+
+  const compromissosHoje = compromissos.filter(c => c.data && c.data.trim() === hoje);
+
+  const cardCompromissos = document.getElementById("card-compromissos");
+  const cardCompromissoDesc = document.getElementById("card-compromisso-desc");
+
+  if (cardCompromissos) cardCompromissos.textContent = compromissosHoje.length;
+  if (cardCompromissoDesc) {
+    if (compromissosHoje.length === 1) cardCompromissoDesc.textContent = 'Compromisso hoje';
+    else if (compromissosHoje.length > 1) cardCompromissoDesc.textContent = 'Compromissos hoje';
+    else cardCompromissoDesc.textContent = 'Nenhum hoje';
+  }
+
+  const totalCompromissosCard = document.getElementById("total-compromissos-card");
+  if (totalCompromissosCard) {
+    const qtdComp = compromissos.length;
+    totalCompromissosCard.textContent = `${qtdComp} ${qtdComp === 1 ? 'cadastrado' : 'cadastrados'}`;
+  }
+}
+
+// 6. NAVEGAÇÃO E LOGOUT
 function navegarPara(pagina) {
   const rawId = usuarioLogado?.id || localStorage.getItem('userId');
   const isValidId = rawId && rawId !== 'undefined' && rawId !== 'null' && !isNaN(rawId);
@@ -420,7 +478,7 @@ async function fazerLogout() {
       method: 'POST',
       credentials: 'include',
       signal: controller.signal
-    }).catch(err => console.warn('Logout falhou ou expirou:', err));
+    }).catch(err => console.warn('Logout falhou:', err));
 
     clearTimeout(timeoutId);
   } catch (e) {
@@ -438,20 +496,25 @@ function redirecionarParaLogin() {
   window.location.href = 'index.html';
 }
 
-// INICIALIZAÇÃO VIA DOMCONTENTLOADED
+// INICIALIZAÇÃO
 document.addEventListener('DOMContentLoaded', async () => {
   await inicializarHomeFamiliar();
 
   const btnLogout = document.getElementById('btnLogout');
   if (btnLogout) {
-    btnLogout.addEventListener('click', fazerLogout);
+    btnLogout.addEventListener('click', (e) => {
+      e.preventDefault();
+      fazerLogout();
+    });
   }
 });
+
+window.addEventListener("pageshow", atualizarTotaisDashboard);
 
 window.carregarIdososVinculados = carregarIdososVinculados;
 window.iniciarLeitorQrCode = iniciarLeitorQrCode;
 window.fecharScannerQrCode = fecharScannerQrCode;
-window.mostrarAvisoEmBreve = mostrarAvisoEmBreve;
 window.navegarPara = navegarPara;
 window.fazerLogout = fazerLogout;
 window.fecharEFinalizarWebApp = fecharEFinalizarWebApp;
+window.selecionarIdoso = selecionarIdoso;

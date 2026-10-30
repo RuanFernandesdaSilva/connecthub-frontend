@@ -1,119 +1,181 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vitalis - Painel do Familiar</title>
   
   <link rel="stylesheet" href="css/home-familiar.css">
-  
-  <!-- Biblioteca para leitura de QR Code via câmera -->
+  <link rel="stylesheet" href="../assistente/assistente.css">
+
+  <!-- Bibliotecas de leitura de QR Code e Telegram WebApp -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="../assistente/zelo-sync.js"></script>
 </head>
+
 <body>
 
-  <div class="container">
-    
-    <!-- Cabeçalho do Perfil -->
-    <header class="profile-header card">
-      <div class="profile-avatar-wrapper">
-        <img id="userAvatar" src="https://via.placeholder.com/100/cbd5e0/ffffff?text=User" alt="Foto de Perfil" class="profile-avatar">
-      </div>
-      <div class="profile-info">
-        <h2 id="userName">Carregando...</h2>
-        <span class="user-role-badge">Familiar</span>
+<div class="wrapper">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="zelo2.png" alt="Logo">
+    </div>
+
+    <nav class="sidebar-nav">
+      <ul>
+        <li><a href="home-familiar.html" class="active">INÍCIO</a></li>
+        <li><a href="../remediofamiliar/remediosfamiliar.html">REMÉDIOS</a></li>
+        <li><a href="../lembretefamilia/lembretesfamiliar.html">LEMBRETES</a></li>
+        <li><a href="../compromissofamilia/compromissosfamiliar.html">COMPROMISSOS</a></li>
+      </ul>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="#" onclick="irParaPerfilIdoso(event)">
+        <span class="icon">👤</span> PERFIL IDOSO
+      </a>
+      <a href="#" id="btnLogout">
+        <span class="icon">➡️</span> SAIR
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    <header class="top-header">
+      <!-- PESQUISA DE IDOSOS -->
+      <div class="search-box-container">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-idoso" placeholder="Buscar idoso por Nome ou ID..." onkeyup="buscarIdoso()">
+        </div>
+        <div id="search-results" class="search-results hidden"></div>
       </div>
 
-      <!-- BOTÃO DE SAIR APENAS COM ÍCONE SVG -->
-      <button type="button" id="btnLogout" class="btn btn-logout" title="Sair da conta" aria-label="Sair">
-        <svg class="logout-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-          <path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h7v2H5v14h7v2zm11-4l-1.375-1.45l2.55-2.55H9v-2h8.175l-2.55-2.55L16 7l5 5z"></path>
-        </svg>
-      </button>
+      <div class="header-right">
+        <!-- NOTIFICAÇÕES -->
+        <div class="notification-container">
+          <button class="bell-btn" id="bell-btn" onclick="toggleNotificacoes()">
+            🔔
+            <span class="badge hidden" id="notif-badge">0</span>
+          </button>
+
+          <div class="notif-drawer hidden" id="notif-drawer">
+            <div class="notif-header">
+              <h3>Notificações do Idoso</h3>
+              <button onclick="limparNotificacoes()" class="btn-clear">Limpar</button>
+            </div>
+            <ul class="notif-list" id="notif-list"></ul>
+          </div>
+        </div>
+
+        <!-- USUÁRIO LOGADO -->
+        <div class="user-pill">
+          <div class="user-info">
+            <span>Olá, <strong id="userName">Carregando...</strong>!</span>
+            <small id="current-idoso-label">Familiar</small>
+          </div>
+          <div class="user-avatar-wrapper">
+            <img id="userAvatar" src="https://ui-avatars.com/api/?name=Familiar&background=cbd5e0&color=fff" alt="Avatar" class="user-avatar-img">
+          </div>
+        </div>
+      </div>
     </header>
 
-    <!-- Caixa de Mensagens de Feedback Geral -->
-    <div id="responseMessage" class="alert hidden"></div>
+    <!-- ALERTA DE FEEDBACK DA API -->
+    <div id="responseMessage" class="alert hidden" style="margin: 15px 20px 0 20px;"></div>
 
     <!-- SEÇÃO DE IDOSOS VINCULADOS -->
-    <section class="card" style="margin-bottom: 20px;">
-      <h3>Meus Idosos Vinculados</h3>
+    <section class="dashboard-section" style="padding-bottom: 0;">
+      <h2>Meus Idosos Vinculados</h2>
       <div id="listaIdososVinculados" class="vinculados-grid" style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
         <p style="color: #666;">Carregando vínculos...</p>
       </div>
     </section>
 
-    <!-- Seção Principal de Módulos / Opções -->
-    <main class="dashboard-section">
-      <h3>Recursos e Ferramentas</h3>
-      <p class="subtitle">Selecione uma das opções abaixo para gerenciar ou acompanhar:</p>
+    <!-- DASHBOARD PRINCIPAL -->
+    <section class="dashboard-section">
+      <h2 id="dashboard-title">Resumo de hoje</h2>
 
-      <div class="dashboard-grid">
-
-        <!-- Escanear QR Code (Abra direto a câmera para scanner ao clicar) -->
-        <div class="dash-card" onclick="iniciarLeitorQrCode()">
-          <div class="dash-icon">📷</div>
-          <h4>Escanear QR Code</h4>
-          <p>Aponte a câmera para o QR Code do idoso para vincular instantaneamente.</p>
+      <!-- CARDS DE STATUS -->
+      <div class="cards-container">
+        <!-- REMÉDIOS -->
+        <div class="card status-card orange">
+          <h3>REMÉDIO</h3>
+          <p class="big-text" id="card-remedios">0/0</p>
+          <p>tomados</p>
         </div>
 
-        <!-- Configurações (Ativo) -->
-        <div class="dash-card" onclick="navegarPara('configuracoes.html')">
-          <div class="dash-icon">⚙️</div>
-          <h4>Configurações</h4>
-          <p>Ajuste dados da conta, notificações e preferências.</p>
+        <!-- ATRASOS -->
+        <div class="card status-card blue">
+          <h3>ATRASOS</h3>
+          <p class="big-text" id="card-atrasos">0</p>
+          <p>pendentes</p>
         </div>
 
-        <!-- Medicamentos (Ativo) -->
-        <div class="dash-card" onclick="navegarPara('medicamentos-familiar.html')">
-          <div class="dash-icon">💊</div>
-          <h4>Medicamentos</h4>
-          <p>Cadastre e acompanhe prescrições e histórico de remédios.</p>
+        <!-- COMPROMISSOS -->
+        <div class="card status-card green">
+          <h3>COMPROMISSOS</h3>
+          <p class="big-text" id="card-compromissos">0</p>
+          <p id="card-compromisso-desc">Nenhum hoje</p>
         </div>
-
-        <!-- Eventos (Em breve) -->
-        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Eventos')">
-          <div class="dash-icon">📅</div>
-          <h4>Eventos</h4>
-          <p>Consulte consultas, rotinas e compromissos.</p>
-        </div>
-
-        <!-- Compras (Em breve) -->
-        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Compras')">
-          <div class="dash-icon">🛒</div>
-          <h4>Compras</h4>
-          <p>Lista de mantimentos e itens de necessidade.</p>
-        </div>
-
-        <!-- Jogos (Em breve) -->
-        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Jogos')">
-          <div class="dash-icon">🎮</div>
-          <h4>Jogos</h4>
-          <p>Atividades cognitivas e de estímulo para o idoso.</p>
-        </div>
-
       </div>
-    </main>
 
+      <!-- CARDS DE AÇÃO + ESCANEAR QR CODE -->
+      <div class="cards-container">
+        <!-- CARD PARA LER QR CODE VIA CÂMERA -->
+        <div class="card action-card qr-card" onclick="iniciarLeitorQrCode()" style="cursor: pointer;">
+          <h3>ESCANEAR QR CODE</h3>
+          <p>vincular idoso pela câmera</p>
+          <span class="total-info">📷 Acessar Câmera</span>
+        </div>
+
+        <!-- REMÉDIOS -->
+        <div class="card action-card" onclick="navegarPara('../remediofamiliar/remediosfamiliar.html')">
+          <h3>REMÉDIOS</h3>
+          <p>gerenciar remédios</p>
+          <span id="total-remedios-card" class="total-info">0 cadastrados</span>
+        </div>
+
+        <!-- LEMBRETES -->
+        <div class="card action-card" onclick="navegarPara('../lembretefamilia/lembretesfamiliar.html')">
+          <h3>LEMBRETES</h3>
+          <p>gerenciar lembretes</p>
+          <span id="total-lembretes-card" class="total-info">0 cadastrados</span>
+        </div>
+
+        <!-- COMPROMISSOS -->
+        <div class="card action-card" onclick="navegarPara('../compromissofamilia/compromissosfamiliar.html')">
+          <h3>COMPROMISSOS</h3>
+          <p>gerenciar compromissos</p>
+          <span id="total-compromissos-card" class="total-info">0 cadastrados</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- MODAL DO SCANNER DA CÂMERA DE QR CODE -->
+<div id="modalScanner" class="modal-overlay hidden" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center;">
+  <div class="modal-card" style="background: #fff; padding: 25px; border-radius: 12px; max-width: 500px; width: 90%; text-align: center;">
+    <h3>Escanear QR Code do Idoso</h3>
+    <p class="subtitle" style="color: #666; margin-bottom: 15px;">Aponte a câmera para o QR Code do idoso:</p>
+    
+    <!-- Vídeo da Câmera -->
+    <div id="qr-reader" style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; margin: 15px 0;"></div>
+    
+    <!-- Feedback visual -->
+    <div id="statusVinculoScanner" class="alert hidden" style="margin-bottom: 15px; padding: 10px; border-radius: 6px;"></div>
+
+    <button id="btnFecharScanner" type="button" class="btn btn-secondary" onclick="fecharScannerQrCode(true)" style="padding: 10px 20px; border: none; background: #e2e8f0; border-radius: 6px; cursor: pointer;">Cancelar / Fechar</button>
   </div>
+</div>
 
-  <!-- MODAL DO SCANNER DA CÂMERA -->
-  <div id="modalScanner" class="modal-overlay hidden">
-    <div class="modal-card" style="max-width: 500px; width: 90%; text-align: center;">
-      <h3>Escanear QR Code do Idoso</h3>
-      <p class="subtitle">Aponte a câmera para a imagem do QR Code:</p>
-      
-      <!-- Contêiner do Vídeo da Câmera -->
-      <div id="qr-reader" style="width: 100%; min-height: 250px; background: #000; border-radius: 8px; margin: 15px 0;"></div>
-      
-      <!-- Feedback visual de processamento -->
-      <div id="statusVinculoScanner" class="alert hidden" style="margin-bottom: 15px;"></div>
-
-      <button id="btnFecharScanner" type="button" class="btn btn-secondary btn-fechar" onclick="fecharScannerQrCode(true)">Cancelar / Fechar</button>
-    </div>
-  </div>
-
-  <script type="module" src="js/home-familiar.js"></script>
+<script type="module" src="js/home-familiar.js"></script>
+<script src="../assistente/assistente.js"></script>
 </body>
 </html>

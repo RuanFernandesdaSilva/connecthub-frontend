@@ -4,96 +4,101 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Vitalis - Painel do Idoso</title>
+  
+  <!-- CAMINHO CORRETO PARA A PASTA CSS -->
   <link rel="stylesheet" href="css/home-idoso.css">
+  <link rel="stylesheet" href="../assistente/assistente.css">
+
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="../assistente/zelo-sync.js"></script>
 </head>
 <body>
 
-  <div class="container">
+  <!-- CABEÇALHO DO PERFIL -->
+  <header class="profile-header card">
+    <div class="profile-avatar-wrapper">
+      <img id="userAvatar" src="https://ui-avatars.com/api/?name=Idoso&background=cbd5e0&color=fff" alt="Foto de Perfil" class="profile-avatar">
+    </div>
+    <div class="profile-info">
+      <h2 id="userName">Carregando...</h2>
+      <span class="user-role-badge role-idoso">Idoso</span>
+    </div>
     
-    <!-- Cabeçalho do Perfil -->
-    <header class="profile-header card">
-      <div class="profile-avatar-wrapper">
-        <img id="userAvatar" src="https://via.placeholder.com/100/cbd5e0/ffffff?text=User" alt="Foto de Perfil" class="profile-avatar">
-      </div>
-      <div class="profile-info">
-        <h2 id="userName">Carregando...</h2>
-        <span class="user-role-badge role-idoso">Idoso</span>
-      </div>
+    <button type="button" id="btnLogout" class="btn btn-logout" title="Sair da conta" aria-label="Sair">
+      <svg class="logout-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+        <path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h7v2H5v14h7v2zm11-4l-1.375-1.45l2.55-2.55H9v-2h8.175l-2.55-2.55L16 7l5 5z"></path>
+      </svg>
+    </button>
+  </header>
+
+  <div id="responseMessage" class="alert hidden" style="margin: 0 4% 15px 4%;"></div>
+
+  <main class="main-container">
+    <section class="menu-container">
       
-      <!-- BOTÃO DE SAIR APENAS COM ÍCONE SVG (Sem onclick duplo) -->
-      <button type="button" id="btnLogout" class="btn btn-logout" title="Sair da conta" aria-label="Sair">
-        <svg class="logout-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" role="img">
-          <path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h7v2H5v14h7v2zm11-4l-1.375-1.45l2.55-2.55H9v-2h8.175l-2.55-2.55L16 7l5 5z"></path>
-        </svg>
-      </button>
-    </header>
+      <!-- BADGE DE ID -->
+      <header class="instructions">
+        <div class="user-id-badge">
+          <span class="id-label">SEU ID:</span>
+          <span class="id-value" id="idoso-id-display">--</span>
+        </div>
 
-    <!-- Caixa de Mensagens de Feedback -->
-    <div id="responseMessage" class="alert hidden"></div>
+        <h1 class="date-title" id="current-date-title">HOJE</h1>
 
-    <!-- SEÇÃO DE FAMILIARES VINCULADOS -->
-    <section class="card" style="margin-bottom: 20px;">
-      <h3>Meus Familiares Vinculados</h3>
-      <div id="listaFamiliaresVinculados" class="vinculados-grid" style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
-        <p style="color: #666;">Carregando vínculos...</p>
+        <p class="action-text">
+          TOQUE NA COR DO RETÂNGULO QUE VOCÊ DESEJA PARA ACESSAR A OPÇÃO:
+        </p>
+      </header>
+
+      <!-- FAMILIARES VINCULADOS -->
+      <section class="vinculados-box">
+        <h3>Meus Familiares Vinculados</h3>
+        <div id="listaFamiliaresVinculados" class="vinculados-grid">
+          <p style="color: #666;">Carregando vínculos...</p>
+        </div>
+      </section>
+
+      <!-- BOTÕES COLORIDOS ZELO -->
+      <div class="options-grid">
+        <a href="#" onclick="navegarPara('medicamentos-idoso.html')" class="grid-btn btn-orange">
+          <span class="color-label">LARANJA</span>
+          <span class="option-title">MEUS REMÉDIOS</span>
+        </a>
+
+        <a href="#" onclick="irParaQRCode()" class="grid-btn btn-blue">
+          <span class="color-label">AZUL</span>
+          <span class="option-title">MEU QR CODE</span>
+        </a>
+
+        <a href="#" onclick="mostrarAvisoEmBreve('Médico Online')" class="grid-btn btn-green">
+          <span class="color-label">VERDE</span>
+          <span class="option-title">MÉDICO ONLINE</span>
+        </a>
+
+        <a href="#" onclick="mostrarAvisoEmBreve('Jogos')" class="grid-btn btn-purple">
+          <span class="color-label">ROXO</span>
+          <span class="option-title">JOGOS PARA MEMÓRIA</span>
+        </a>
+
+        <a href="#" onclick="navegarPara('configuracoes.html')" class="grid-btn btn-pink">
+          <span class="color-label">ROSA</span>
+          <span class="option-title">CONFIGURAÇÕES</span>
+        </a>
+
+        <section class="emergency-box">
+          <h2>AJUDA</h2>
+          <div class="emergency-options">
+            <a href="tel:190" class="emergency-btn police"><span class="emergency-icon">🚓</span><span>POLÍCIA</span></a>
+            <a href="tel:193" class="emergency-btn firefighters"><span class="emergency-icon">🚒</span><span>BOMBEIROS</span></a>
+            <a href="tel:192" class="emergency-btn samu"><span class="emergency-icon">🚑</span><span>SAMU</span></a>
+            <a href="tel:5516999999999" class="emergency-btn family"><span class="emergency-icon">👨‍👩‍👧</span><span>FAMILIAR</span></a>
+          </div>
+        </section>
       </div>
     </section>
-
-    <!-- Seção Principal de Módulos / Opções -->
-    <main class="dashboard-section">
-      <h3>Seu Painel Principal</h3>
-      <p class="subtitle">Selecione uma das opções abaixo para acessar seus recursos:</p>
-
-      <div class="dashboard-grid">
-
-        <!-- Vínculo (Vai DIRETO para a tela de QR Code) -->
-        <div class="dash-card" onclick="irParaQRCode()">
-          <div class="dash-icon">📱</div>
-          <h4>Meu QR Code</h4>
-          <p>Exiba seu código para que seu familiar possa se vincular a você.</p>
-        </div>
-
-        <!-- Configurações (Ativo) -->
-        <div class="dash-card" onclick="navegarPara('configuracoes.html')">
-          <div class="dash-icon">⚙️</div>
-          <h4>Configurações</h4>
-          <p>Ajuste dados do perfil, tamanho de fonte e preferências.</p>
-        </div>
-
-        <!-- Medicamentos (Ativo) -->
-        <div class="dash-card" onclick="navegarPara('medicamentos-idoso.html')">
-          <div class="dash-icon">💊</div>
-          <h4>Meus Remédios</h4>
-          <p>Consulte seus horários e confirme as doses tomadas.</p>
-        </div>
-
-        <!-- Eventos (Em breve) -->
-        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Eventos')">
-          <div class="dash-icon">📅</div>
-          <h4>Meus Compromissos</h4>
-          <p>Veja sua agenda de consultas e atividades.</p>
-        </div>
-
-        <!-- Compras (Em breve) -->
-        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Compras')">
-          <div class="dash-icon">🛒</div>
-          <h4>Lista de Compras</h4>
-          <p>Confira itens da sua lista e pedidos para familiares.</p>
-        </div>
-
-        <!-- Jogos (Em breve) -->
-        <div class="dash-card disabled" onclick="mostrarAvisoEmBreve('Jogos')">
-          <div class="dash-icon">🎮</div>
-          <h4>Jogos e Estímulo</h4>
-          <p>Exercite a memória com jogos interativos simples.</p>
-        </div>
-
-      </div>
-    </main>
-
-  </div>
+  </main>
 
   <script type="module" src="js/home-idoso.js"></script>
+  <script src="../assistente/assistente.js"></script>
 </body>
 </html>
